@@ -95,11 +95,16 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: va
 <div id="log-box" style="display:none"></div>
 <div id="books-list"></div>
 <div class="bottom-bar">
-  <button class="scan-btn" id="scan-btn" onclick="document.getElementById('file-input').click()">
-    📷 本棚を撮影して一括リサーチ
-  </button>
+  <div style="display:flex;gap:8px">
+    <button class="scan-btn" id="scan-btn" onclick="startContinuous()" style="flex:1">
+      📷 撮影開始
+    </button>
+    <button id="stop-btn" onclick="stopContinuous()" style="display:none;padding:15px 18px;background:#450a0a;border:1px solid var(--red-border);border-radius:var(--radius);color:var(--red);font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;">
+      ■ 終了
+    </button>
+  </div>
 </div>
-<input type="file" id="file-input" accept="image/*" multiple style="display:none" onchange="handleFiles(this)">
+<input type="file" id="file-input" accept="image/*" capture="environment" style="display:none" onchange="handleContinuous(this)">
 
 <script>
 // ── バージョン: 2.0 ──────────────────────────────
@@ -416,60 +421,79 @@ async function fetchKeepa(isbn, title) {
   } catch(e) { log(`Keepaエラー: ${e.message}`); return null; }
 }
 
-// ── Processing ────────────────────────────────────
-async function handleFiles(input) {
-  const files = Array.from(input.files);
-  input.value = '';
-  if (!files.length) return;
+// ── Continuous shooting ───────────────────────────
+let continuousMode = false;
+
+function startContinuous() {
   if (!state.geminiKey) {
     document.getElementById('warn-banner').textContent = '⚠️ 設定からGemini APIキーを入力してください';
     document.getElementById('warn-banner').style.display = '';
     state.showSettings = true; renderSettings(); return;
   }
-  state.processing = true; renderScanBtn();
+  continuousMode = true;
+  document.getElementById('stop-btn').style.display = '';
+  document.getElementById('scan-btn').textContent = '📷 次を撮影';
+  document.getElementById('file-input').click();
+}
 
-  for (const file of files) {
-    log(`処理開始: ${file.name}`);
-    showProgress('🔮 Geminiで本を認識中...', 10);
-    try {
-      const bookList = await extractBooks(file);
-      log(`認識: ${bookList.length}冊`);
-      if (!bookList.length) { showProgress('本が認識できませんでした', 100); setTimeout(hideProgress, 2000); continue; }
-      showProgress(`📚 ${bookList.length}冊認識 → Keepaデータ取得中...`, 40);
+function stopContinuous() {
+  continuousMode = false;
+  document.getElementById('stop-btn').style.display = 'none';
+  document.getElementById('scan-btn').textContent = '📷 撮影開始';
+  renderScanBtn();
+}
 
-      const entries = bookList.map(book => {
-        const id = ++state.counter;
-        state.books.unshift({ id, status: 'loading', bookInfo: book, keepa: null, verdict: 'loading', buyPrice: state.buyPrice });
-        return { id, book };
-      });
-      renderBooks(); renderHeader();
+async function handleContinuous(input) {
+  const file = input.files[0];
+  input.value = '';
+  if (!file) { stopContinuous(); return; }
 
-      let done = 0;
-      await Promise.all(entries.map(async ({ id, book }) => {
-        try {
-          let isbn = book.isbn;
-          if (!isbn && book.title) isbn = await lookupIsbn(book.title, book.author);
-          const keepa = await fetchKeepa(isbn, book.title);
-          const verdict = keepa ? classify(keepa, state.buyPrice) : 'unknown';
-          updateBook(id, { isbn, keepa, verdict, status: 'done' });
-          log(`完了: ${book.title?.slice(0,20)} → ${verdict}`);
-        } catch(e) {
-          log(`エラー: ${e.message}`);
-          updateBook(id, { status: 'error', verdict: 'error' });
-        } finally {
-          done++;
-          showProgress(`📚 取得中... (${done}/${entries.length})`, 40 + Math.round(done/entries.length*55));
-        }
-      }));
-      showProgress(`✅ ${bookList.length}冊完了！`, 100);
-      setTimeout(hideProgress, 1500);
-    } catch(e) {
-      log(`エラー: ${e.message}`);
-      showProgress(`❌ ${e.message}`, 100);
-      setTimeout(hideProgress, 3000);
-    }
+  // 処理中でも連続撮影できるよう次の撮影を即座に開いてから処理
+  if (continuousMode) {
+    setTimeout(() => {
+      if (continuousMode) document.getElementById('file-input').click();
+    }, 500);
   }
-  state.processing = false; renderScanBtn();
+
+  log(`処理開始: ${file.name}`);
+  showProgress('🔮 Geminiで本を認識中...', 10);
+  try {
+    const bookList = await extractBooks(file);
+    log(`認識: ${bookList.length}冊`);
+    if (!bookList.length) { showProgress('本が認識できませんでした', 100); setTimeout(hideProgress, 2000); return; }
+    showProgress(`📚 ${bookList.length}冊認識 → データ取得中...`, 40);
+
+    const entries = bookList.map(book => {
+      const id = ++state.counter;
+      state.books.unshift({ id, status: 'loading', bookInfo: book, keepa: null, verdict: 'loading', buyPrice: state.buyPrice });
+      return { id, book };
+    });
+    renderBooks(); renderHeader();
+
+    let done = 0;
+    await Promise.all(entries.map(async ({ id, book }) => {
+      try {
+        let isbn = book.isbn;
+        if (!isbn && book.title) isbn = await lookupIsbn(book.title, book.author);
+        const keepa = await fetchKeepa(isbn, book.title);
+        const verdict = keepa ? classify(keepa, state.buyPrice) : 'unknown';
+        updateBook(id, { isbn, keepa, verdict, status: 'done' });
+        log(`完了: ${book.title?.slice(0,20)} → ${verdict}`);
+      } catch(e) {
+        log(`エラー: ${e.message}`);
+        updateBook(id, { status: 'error', verdict: 'error' });
+      } finally {
+        done++;
+        showProgress(`📚 取得中... (${done}/${entries.length})`, 40 + Math.round(done/entries.length*55));
+      }
+    }));
+    showProgress(`✅ ${bookList.length}冊完了！`, 100);
+    setTimeout(hideProgress, 1500);
+  } catch(e) {
+    log(`エラー: ${e.message}`);
+    showProgress(`❌ ${e.message}`, 100);
+    setTimeout(hideProgress, 3000);
+  }
 }
 
 function updateBook(id, patch) {
@@ -576,10 +600,8 @@ function renderBooks() {
 
 function renderScanBtn() {
   const btn = document.getElementById('scan-btn');
-  btn.disabled = state.processing;
-  btn.innerHTML = state.processing
-    ? '<span style="display:inline-flex;align-items:center;gap:8px;justify-content:center"><span class="spinner" style="border-color:#4338ca;border-top-color:#c7d2fe"></span>処理中...</span>'
-    : '📷 本棚を撮影して一括リサーチ';
+  btn.disabled = false;
+  btn.textContent = continuousMode ? '📷 次を撮影' : '📷 撮影開始';
 }
 
 function saveSettings() {
