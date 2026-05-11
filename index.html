@@ -85,6 +85,7 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: va
     <div class="header-stats" id="header-stats"></div>
   </div>
   <div style="display:flex;gap:8px">
+    <button class="icon-btn" onclick="resetAll()" title="リセット">🗑️</button>
     <button class="icon-btn" onclick="toggleLog()">🔍</button>
     <button class="icon-btn" onclick="toggleSettings()">⚙️ 設定</button>
   </div>
@@ -612,6 +613,17 @@ function saveSettings() {
     msg.style.display = '';
     setTimeout(() => { msg.style.display = 'none'; }, 2000);
   }
+}
+
+function resetAll() {
+  if (state.books.length === 0) return;
+  state.books = [];
+  state.counter = 0;
+  state.logs = [];
+  renderBooks();
+  renderHeader();
+  renderLog();
+  hideProgress();
 }
 
 function toggleSettings() { state.showSettings = !state.showSettings; renderSettings(); }
