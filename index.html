@@ -104,6 +104,8 @@ let state = {
   geminiKey: '',
   keepaKey: '',
   buyPrice: 100,
+  shippingCost: 500,       // 送料（手入力）
+  conditionGrade: 'used',  // 'used'=可以上 'good'=良い以上 'vgood'=非常に良い以上
   thresholds: { minProfit: 300, maxSalesRank: 300000, maxSellers: 5, minListPrice: 500 },
   books: [],
   showSettings: false,
@@ -118,6 +120,8 @@ try {
   if (s.geminiKey) state.geminiKey = s.geminiKey;
   if (s.keepaKey) state.keepaKey = s.keepaKey;
   if (s.buyPrice != null) state.buyPrice = s.buyPrice;
+  if (s.shippingCost != null) state.shippingCost = s.shippingCost;
+  if (s.conditionGrade) state.conditionGrade = s.conditionGrade;
   if (s.thresholds) state.thresholds = { ...state.thresholds, ...s.thresholds };
 } catch(e) {}
 
@@ -127,6 +131,8 @@ function save() {
       geminiKey: state.geminiKey,
       keepaKey: state.keepaKey,
       buyPrice: state.buyPrice,
+      shippingCost: state.shippingCost,
+      conditionGrade: state.conditionGrade,
       thresholds: state.thresholds,
     }));
   } catch(e) {}
@@ -140,11 +146,22 @@ function log(msg) {
   if (state.showLog) renderLog();
 }
 
+// コンディション別の価格を取得
+function getConditionPrice(k) {
+  switch (state.conditionGrade) {
+    case 'good':  return k.priceGood  ?? k.currentPrice;
+    case 'vgood': return k.priceVGood ?? k.currentPrice;
+    default:      return k.currentPrice; // 可以上（最安値）
+  }
+}
+
 // ── Classify ──────────────────────────────────────
 function classify(k, bp) {
   const { minProfit, maxSalesRank, maxSellers, minListPrice } = state.thresholds;
-  const profit = k.currentPrice - bp - 500;
-  return (profit >= minProfit && k.salesRank <= maxSalesRank && k.sellerCount <= maxSellers && k.currentPrice >= minListPrice && !k.priceDropRisk)
+  const sellPrice = getConditionPrice(k);
+  const amazonFee = Math.floor(sellPrice * 0.165);
+  const profit = Math.floor(sellPrice - bp - state.shippingCost - amazonFee);
+  return (profit >= minProfit && k.salesRank <= maxSalesRank && k.sellerCount <= maxSellers && sellPrice >= minListPrice && !k.priceDropRisk)
     ? 'buy' : 'skip';
 }
 
@@ -350,7 +367,8 @@ async function lookupIsbn(title, author) {
 async function fetchKeepa(isbn, title) {
   if (!state.keepaKey) {
     await new Promise(r => setTimeout(r, 150));
-    return { currentPrice: Math.floor(Math.random()*3000)+500, salesRank: Math.floor(Math.random()*500000)+1000, sellerCount: Math.floor(Math.random()*10)+1, priceDropRisk: Math.random()>0.6, isDemo: true };
+    const cur = Math.floor(Math.random()*3000)+500;
+    return { currentPrice: cur, priceGood: Math.floor(cur*1.1), priceVGood: Math.floor(cur*1.2), salesRank: Math.floor(Math.random()*500000)+1000, sellerCount: Math.floor(Math.random()*10)+1, priceDropRisk: Math.random()>0.6, isDemo: true };
   }
   try {
     let url;
@@ -366,12 +384,27 @@ async function fetchKeepa(isbn, title) {
     const d = await r.json();
     const p = d.products?.[0];
     if (!p) { log('Keepa: 商品なし'); return null; }
-    const prices = p.csv?.[0]?.filter(v => v > 0) || [];
+    // csv[0]=新品, csv[1]=中古可, csv[2]=中古良い, csv[3]=中古非常に良い
+    const getLatest = (csvIdx) => {
+      const arr = p.csv?.[csvIdx]?.filter(v => v > 0) || [];
+      return arr.length ? arr.slice(-1)[0] / 100 : null;
+    };
+    const cur = getLatest(1) || getLatest(0) || 0; // 中古可以上
+    const curGood  = getLatest(2); // 中古良い以上
+    const curVGood = getLatest(3); // 中古非常に良い以上
+    const prices = p.csv?.[1]?.filter(v => v > 0) || [];
     const recent = prices.slice(-20);
     const avg = recent.reduce((a, b) => a + b, 0) / (recent.length || 1);
-    const cur = prices.slice(-1)[0] || 0;
     log('Keepa: 成功');
-    return { currentPrice: cur/100, salesRank: p.salesRanks?.['book']?.slice(-1)[0]||0, sellerCount: p.stats?.buyBoxSellerCount?.[1]||0, priceDropRisk: cur < avg*0.85, isDemo: false };
+    return {
+      currentPrice: Math.floor(cur),
+      priceGood:    curGood  ? Math.floor(curGood)  : null,
+      priceVGood:   curVGood ? Math.floor(curVGood) : null,
+      salesRank: p.salesRanks?.['book']?.slice(-1)[0] || 0,
+      sellerCount: p.stats?.buyBoxSellerCount?.[1] || 0,
+      priceDropRisk: cur > 0 && cur < avg/100 * 0.85,
+      isDemo: false,
+    };
   } catch(e) { log(`Keepaエラー: ${e.message}`); return null; }
 }
 
@@ -480,6 +513,16 @@ function renderSettings() {
     <hr class="divider">
     <div class="section-label">仕入れ設定</div>
     <div class="field"><label>仕入れ価格（円）</label><input type="text" inputmode="numeric" value="${state.buyPrice}" oninput="state.buyPrice=Number(this.value)||0"></div>
+    <div class="field"><label>送料（円）</label><input type="text" inputmode="numeric" value="${state.shippingCost}" oninput="state.shippingCost=Number(this.value)||0"></div>
+    <div class="field">
+      <label>参照価格（コンディション）</label>
+      <select oninput="state.conditionGrade=this.value" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;color:var(--text);font-family:inherit;">
+        <option value="used"  ${state.conditionGrade==='used' ?'selected':''}>可以上（最安値）</option>
+        <option value="good"  ${state.conditionGrade==='good' ?'selected':''}>良い以上</option>
+        <option value="vgood" ${state.conditionGrade==='vgood'?'selected':''}>非常に良い以上</option>
+      </select>
+    </div>
+    <p style="font-size:11px;color:var(--text3);margin-top:4px">Amazon手数料16.5%を自動計算</p>
     <hr class="divider">
     <div class="section-label">買い判定基準</div>
     <div class="field"><label>最低利益額（¥ 以上）</label><input type="text" inputmode="numeric" value="${minProfit}" oninput="state.thresholds.minProfit=Number(this.value)||0"></div>
@@ -502,15 +545,19 @@ function renderBooks() {
     const cls = b.status==='error'?'error':b.verdict==='buy'?'buy':b.verdict==='skip'?'skip':'loading';
     const badge = b.status==='error'?'✕ 取得失敗':b.status==='loading'?'解析中':b.verdict==='buy'?'✓ 買い':'✕ スキップ';
     const k = b.keepa;
-    const profit = k ? k.currentPrice - b.buyPrice - 500 : 0;
+    const sellPrice = k ? getConditionPrice(k) : 0;
+    const amazonFee = k ? Math.floor(sellPrice * 0.165) : 0;
+    const profit = k ? Math.floor(sellPrice - b.buyPrice - state.shippingCost - amazonFee) : 0;
+    const condLabel = state.conditionGrade === 'vgood' ? '非常に良い以上' : state.conditionGrade === 'good' ? '良い以上' : '可以上';
     return `<div class="card ${cls}">
       <button class="remove-btn" onclick="removeBook(${b.id})">×</button>
       <div class="card-badge">${badge}${b.status==='loading'?'<span class="loading-pulse"> …</span>':''}${k?.isDemo?'<span class="card-demo">デモ</span>':''}</div>
       <div class="card-title">${b.bookInfo?.title||'取得中...'}</div>
       <div class="card-author">${b.bookInfo?.author||''}</div>
       ${k?`<div class="stats-grid">
-        <div class="stat-item"><div class="stat-label">最安値</div><div class="stat-value ${k.currentPrice>=minListPrice?'good':'bad'}">¥${k.currentPrice.toLocaleString()}</div></div>
-        <div class="stat-item"><div class="stat-label">利益目安</div><div class="stat-value ${profit>=minProfit?'good':'bad'}">¥${profit.toLocaleString()}</div></div>
+        <div class="stat-item"><div class="stat-label">参照価格（${condLabel}）</div><div class="stat-value ${sellPrice>=minListPrice?'good':'bad'}">¥${sellPrice.toLocaleString()}円</div></div>
+        <div class="stat-item"><div class="stat-label">利益目安</div><div class="stat-value ${profit>=minProfit?'good':'bad'}">¥${profit.toLocaleString()}円</div></div>
+        <div class="stat-item"><div class="stat-label">Amazon手数料</div><div class="stat-value neutral">¥${amazonFee.toLocaleString()}円</div></div>
         <div class="stat-item"><div class="stat-label">Sales Rank</div><div class="stat-value ${k.salesRank<=maxSalesRank?'good':'bad'}">#${k.salesRank.toLocaleString()}</div></div>
         <div class="stat-item"><div class="stat-label">出品者数</div><div class="stat-value ${k.sellerCount<=maxSellers?'good':'bad'}">${k.sellerCount}人</div></div>
         <div class="stat-item full"><div class="stat-label">価格トレンド</div><div class="stat-value ${k.priceDropRisk?'bad':'good'}">${k.priceDropRisk?'⚠ 値下がり傾向':'✓ 安定'}</div></div>
