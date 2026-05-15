@@ -363,21 +363,6 @@ function cleanTitle(title) {
 async function lookupIsbn(title, author) {
   const cleaned = cleanTitle(title);
   log(`ISBN検索: ${cleaned.slice(0, 25)}`);
-
-  // NDL（国立国会図書館）- 無料・制限なし
-  try {
-    const q = encodeURIComponent(cleaned);
-    const r = await fetch(`https://ndlsearch.ndl.go.jp/api/opensearch?title=${q}&cnt=3&mediatype=1`);
-    const t = await r.text();
-    const matches = [...t.matchAll(/<dc:identifier type="dcndl:ISBN">(\d{13})<\/dc:identifier>/g)];
-    if (matches.length) {
-      const isbn = matches[0][1];
-      log(`NDL: ${isbn}`);
-      return isbn;
-    }
-  } catch(e) { log(`NDLエラー: ${e.message}`); }
-
-  // OpenBD - タイトル検索はできないがフォールバック
   log(`ISBN見つからず: ${cleaned.slice(0, 20)}`);
   return null;
 }
@@ -394,10 +379,11 @@ async function fetchKeepa(isbn, title) {
     if (isbn) {
       url = `https://api.keepa.com/product?key=${state.keepaKey}&domain=5&code=${isbn}&stats=1`;
       log(`Keepa ISBN: ${isbn}`);
-    } else {
-      log('ISBN なし → スキップ');
-      return null;
-    }
+    } else if (title) {
+      const ct = cleanTitle(title);
+      url = `https://api.keepa.com/search?key=${state.keepaKey}&domain=5&type=product&term=${encodeURIComponent(ct)}&page=0&perPage=1`;
+      log(`Keepa タイトル直接: ${ct.slice(0,20)}`);
+    } else return null;
     const r = await fetch(url);
     const d = await r.json();
     const p = d.products?.[0];
@@ -478,8 +464,8 @@ async function handleContinuous(input) {
     let done = 0;
     await Promise.all(entries.map(async ({ id, book }) => {
       try {
-        let isbn = book.isbn;
-        if (!isbn && book.title) isbn = await lookupIsbn(book.title, book.author);
+        const isbn = book.isbn || null;
+        // ISBNがあればKeepa ISBN検索、なければタイトルで直接Keepa検索
         const keepa = await fetchKeepa(isbn, book.title);
         const verdict = keepa ? classify(keepa, state.buyPrice) : 'unknown';
         updateBook(id, { isbn, keepa, verdict, status: 'done' });
