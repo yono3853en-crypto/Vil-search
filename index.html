@@ -363,13 +363,26 @@ function cleanTitle(title) {
 async function lookupIsbn(title, author) {
   const cleaned = cleanTitle(title);
   log(`ISBN検索: ${cleaned.slice(0, 25)}`);
+
+  // 試行1: タイトル＋著者
   try {
-    const q = encodeURIComponent(`${cleaned} ${author || ''}`);
+    const q = encodeURIComponent(`intitle:${cleaned}${author ? ' inauthor:' + author : ''}`);
     const r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1&langRestrict=ja`);
     const d = await r.json();
     const isbn = d.items?.[0]?.volumeInfo?.industryIdentifiers?.find(i => i.type === 'ISBN_13')?.identifier;
-    if (isbn) { log(`Google Books: ${isbn}`); return isbn; }
+    if (isbn) { log(`Google Books(1): ${isbn}`); return isbn; }
   } catch {}
+
+  // 試行2: タイトルのみ
+  try {
+    const q = encodeURIComponent(cleaned);
+    const r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1&langRestrict=ja`);
+    const d = await r.json();
+    const isbn = d.items?.[0]?.volumeInfo?.industryIdentifiers?.find(i => i.type === 'ISBN_13')?.identifier;
+    if (isbn) { log(`Google Books(2): ${isbn}`); return isbn; }
+  } catch {}
+
+  // 試行3: NDL
   try {
     const q = encodeURIComponent(cleaned);
     const r = await fetch(`https://ndlsearch.ndl.go.jp/api/opensearch?title=${q}&cnt=1&mediatype=1`);
@@ -377,6 +390,7 @@ async function lookupIsbn(title, author) {
     const m = t.match(/<dc:identifier type="dcndl:ISBN">(\d{13})<\/dc:identifier>/);
     if (m) { log(`NDL: ${m[1]}`); return m[1]; }
   } catch {}
+
   log(`ISBN見つからず: ${cleaned.slice(0, 20)}`);
   return null;
 }
@@ -393,11 +407,10 @@ async function fetchKeepa(isbn, title) {
     if (isbn) {
       url = `https://api.keepa.com/product?key=${state.keepaKey}&domain=5&code=${isbn}&stats=1`;
       log(`Keepa ISBN: ${isbn}`);
-    } else if (title) {
-      const ct = cleanTitle(title);
-      url = `https://api.keepa.com/search?key=${state.keepaKey}&domain=5&type=product&term=${encodeURIComponent(ct)}&page=0&perPage=1`;
-      log(`Keepa タイトル: ${ct.slice(0,20)}`);
-    } else return null;
+    } else {
+      log('ISBN なし → スキップ');
+      return null;
+    }
     const r = await fetch(url);
     const d = await r.json();
     const p = d.products?.[0];
