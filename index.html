@@ -362,7 +362,7 @@ async function onFile(input){
     renderBooks();renderHeader();
 
     let done=0;
-    // Keepaトークンが1/minのため順番に処理
+    // 1冊ずつ順番に処理（トークンを無駄にしない）
     for(const {id,book} of entries){
       try{
         const isbn=await lookupIsbn(book.title,book.author);
@@ -376,8 +376,6 @@ async function onFile(input){
       }
       done++;
       showProg(`📚 取得中... (${done}/${entries.length})`,40+Math.round(done/entries.length*55));
-      // トークン回復待ち（1/min = 60秒に1トークン）
-      if(done<entries.length) await new Promise(r=>setTimeout(r,62000));
     }
     showProg(`✅ ${bookList.length}冊完了！`,100);
     setTimeout(hideProg,1500);
