@@ -306,15 +306,123 @@ async function callGemini(base64) {
   }
 }
 
+// ── Gemini: detect book positions ────────────────
+async function detectBookPositions(base64, width, height) {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.geminiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: 'JSONのみを返すAPIです。マークダウン不要。' }] },
+        contents: [{
+          parts: [
+            { inline_data: { mime_type: 'image/jpeg', data: base64 } },
+            { text: `この画像に写っている本棚の各本の背表紙の左端と右端のX座標（ピクセル）を返してください。
+画像の幅は${width}px、高さは${height}pxです。
+左から順に各本の位置を配列で返してください。
+[{"x1":0,"x2":80},{"x1":80,"x2":160},...] のような形式で。
+背表紙が見えない本は除外してください。` }
+          ]
+        }],
+        generationConfig: { maxOutputTokens: 2000, temperature: 0 }
+      })
+    }
+  );
+  if (!res.ok) return null;
+  const d = await res.json();
+  const raw = d.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+  const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+  const s = cleaned.indexOf('['), e = cleaned.lastIndexOf(']');
+  if (s === -1 || e <= s) return null;
+  try { return JSON.parse(cleaned.slice(s, e + 1)); } catch { return null; }
+}
+
 async function extractBooks(file) {
   if (!state.geminiKey) throw new Error('Gemini APIキーが未設定です');
   const { base64, width, height, canvas } = await resizeImage(file, 1536);
   log(`画像: ${width}x${height} / ${Math.round(base64.length * 0.75 / 1024)}KB`);
 
-  // 横2分割して2倍に拡大→各本が大きく写り認識精度アップ
-  log('左右2分割・拡大認識');
+  // Step1: 本の位置を検出
+  log('Step1: 本の位置を検出中...');
+  const positions = await detectBookPositions(base64, width, height);
+
+  if (positions && positions.length > 0) {
+    log(`${positions.length}冊の位置を検出`);
+
+    // Step2: 各本を切り出して拡大、個別に認識
+    const bookPromises = positions.map(async (pos, i) => {
+      const x1 = Math.max(0, Math.floor(pos.x1));
+      const x2 = Math.min(width, Math.floor(pos.x2));
+      const bw = x2 - x1;
+      if (bw < 5) return null;
+
+      // 4倍に拡大して切り出し
+      const scale = Math.min(4, 400 / bw);
+      const c = document.createElement('canvas');
+      c.width = Math.floor(bw * scale);
+      c.height = Math.floor(height * scale);
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(canvas, x1, 0, bw, height, 0, 0, c.width, c.height);
+      const tileBase64 = c.toDataURL('image/jpeg', 0.95).split(',')[1];
+
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.geminiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: 'JSONのみを返すAPIです。マークダウン不要。' }] },
+            contents: [{
+              parts: [
+                { inline_data: { mime_type: 'image/jpeg', data: tileBase64 } },
+                { text: `この本1冊の背表紙を読んでください。
+見えた文字をそのまま書いてください。推測・補完禁止。
+{"title":"タイトル","author":"著者またはnull","isbn":"13桁またはnull"}` }
+              ]
+            }],
+            generationConfig: { maxOutputTokens: 200, temperature: 0 }
+          })
+        }
+      );
+      if (!res.ok) return null;
+      const d = await res.json();
+      const raw = d.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+      const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const s = cleaned.indexOf('{'), e = cleaned.lastIndexOf('}');
+      if (s === -1 || e <= s) return null;
+      try {
+        const book = JSON.parse(cleaned.slice(s, e + 1));
+        if (book.title && book.title.length > 3) {
+          log(`本${i+1}: ${book.title.slice(0, 20)}`);
+          return book;
+        }
+      } catch {}
+      return null;
+    });
+
+    // 並列処理（5冊ずつバッチ処理してレート制限を回避）
+    const results = [];
+    const batchSize = 5;
+    for (let i = 0; i < bookPromises.length; i += batchSize) {
+      const batch = await Promise.all(bookPromises.slice(i, i + batchSize));
+      results.push(...batch);
+      if (i + batchSize < bookPromises.length) {
+        await new Promise(r => setTimeout(r, 500));
+      }
+    }
+
+    const books = results.filter(b => b !== null);
+    log(`認識: ${books.length}冊`);
+    return books;
+  }
+
+  // フォールバック: 左右2分割
+  log('位置検出失敗→左右2分割フォールバック');
   const half = Math.ceil(width / 2);
-  const allTiles = [];
+  const tiles = [];
   for (let i = 0; i < 2; i++) {
     const sx = i * half;
     const sw = Math.min(half, width - sx);
@@ -324,20 +432,13 @@ async function extractBooks(file) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(canvas, sx, 0, sw, height, 0, 0, sw * 2, height * 2);
-    allTiles.push(c.toDataURL('image/jpeg', 0.9).split(',')[1]);
+    tiles.push(c.toDataURL('image/jpeg', 0.9).split(',')[1]);
   }
-
-  const results = await Promise.all(allTiles.map((t, i) => {
-    log(`${i === 0 ? '左半分' : '右半分'}送信`);
-    return callGemini(t).catch(e => { log(`タイルエラー: ${e.message}`); return []; });
-  }));
-
+  const results2 = await Promise.all(tiles.map(t => callGemini(t).catch(() => [])));
   const seen = new Set();
-  const books = results.flat().filter(b => {
-    if (!b.title) return false;
-    const title = b.title.trim();
-    if (title.length <= 4) return false;
-    const k = title.slice(0, 15);
+  const books = results2.flat().filter(b => {
+    if (!b.title || b.title.trim().length <= 4) return false;
+    const k = b.title.trim().slice(0, 15);
     if (seen.has(k)) return false;
     seen.add(k); return true;
   });
