@@ -6,499 +6,792 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="VeilSearch">
-<meta name="theme-color" content="#0f0f0f">
+<meta name="theme-color" content="#080608">
 <title>Veil Search</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#0f0f0f;--bg2:#1a1a1a;--bg3:#242424;
-  --border:#2e2e2e;--text:#f0f0f0;--text2:#888;--text3:#555;
-  --green:#4ade80;--green-bg:#0d2016;--green-border:#1a4a2a;
-  --red:#f87171;--red-bg:#200d0d;--red-border:#4a1a1a;
-  --accent:#6366f1;--accent2:#818cf8;--r:12px;
+  --black: #080608;
+  --dark: #0e0c10;
+  --card-bg: #110f13;
+  --border: rgba(212,175,55,0.15);
+  --border-bright: rgba(212,175,55,0.4);
+  --gold: #d4af37;
+  --gold-light: #f0d060;
+  --gold-dim: rgba(212,175,55,0.5);
+  --text: #f0ece4;
+  --text2: #9a9080;
+  --text3: #5a5048;
+  --green: #4ade80;
+  --green-bg: rgba(74,222,128,0.05);
+  --green-border: rgba(74,222,128,0.2);
+  --red: #f87171;
+  --red-bg: rgba(248,113,113,0.05);
+  --red-border: rgba(248,113,113,0.2);
 }
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:16px;padding-bottom:110px;}
-button{cursor:pointer;font-family:inherit;}
-input,select{font-family:inherit;}
 
-.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);}
-.title{font-size:18px;font-weight:700;}
-.title span{color:var(--accent2);}
-.stats{font-size:12px;color:var(--text2);margin-top:2px;}
-.stats .buy{color:var(--green);font-weight:500;}
-.stats .skip{color:var(--red);font-weight:500;}
-.hbtns{display:flex;gap:8px;}
-.ibtn{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text2);font-size:13px;}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-.settings{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:16px;}
-.slabel{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent2);margin-bottom:10px;}
-.field{margin-bottom:10px;}
-.field:last-of-type{margin-bottom:0;}
-.field label{font-size:12px;color:var(--text2);display:block;margin-bottom:5px;}
-.field input,.field select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;color:var(--text);}
-.field input:focus,.field select:focus{outline:none;border-color:var(--accent);}
-.divider{border:none;border-top:1px solid var(--border);margin:14px 0;}
-.tnote{font-size:11px;color:var(--text3);margin-top:8px;}
-.savebtn{width:100%;margin-top:14px;padding:12px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:700;}
-.savemsg{display:none;text-align:center;font-size:12px;color:var(--green);margin-top:8px;}
+body {
+  font-family: 'Montserrat', sans-serif;
+  background: var(--black);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 20px 16px 120px;
+  background-image:
+    radial-gradient(ellipse at 20% 0%, rgba(212,175,55,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(212,175,55,0.03) 0%, transparent 60%);
+}
 
-.progress{background:var(--bg2);border:1px solid var(--accent);border-radius:8px;padding:12px 14px;margin-bottom:14px;}
-.ptop{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px;}
-.spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
-@keyframes spin{to{transform:rotate(360deg);}}
-.pbar-wrap{background:var(--bg3);border-radius:99px;height:4px;overflow:hidden;}
-.pbar{height:4px;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s;}
+button { cursor: pointer; font-family: inherit; }
+input, select { font-family: inherit; outline: none; }
 
-.warn{background:#1c1204;border:1px solid #5a3e0a;border-radius:8px;padding:10px 14px;font-size:12px;color:#fbbf24;margin-bottom:14px;}
+/* ── HEADER ── */
+.hdr {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.hdr::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0;
+  width: 60px; height: 1px;
+  background: var(--gold);
+}
+.hdr-left { flex: 1; }
+.hdr-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px;
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  color: var(--text);
+}
+.hdr-title span {
+  color: var(--gold);
+  font-weight: 600;
+}
+.hdr-sub {
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-top: 6px;
+}
+.hdr-stats {
+  font-size: 11px;
+  color: var(--text2);
+  margin-top: 8px;
+  letter-spacing: 0.05em;
+}
+.hdr-stats .buy { color: var(--green); font-weight: 500; }
+.hdr-stats .skip { color: var(--red); }
+.hdr-btns { display: flex; gap: 6px; padding-top: 4px; }
+.ibtn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 10px;
+  color: var(--text3);
+  font-size: 12px;
+  transition: border-color .2s, color .2s;
+}
+.ibtn:hover { border-color: var(--gold-dim); color: var(--gold); }
 
-.card{border-radius:var(--r);padding:14px;margin-bottom:10px;position:relative;border:1px solid;animation:fadeIn .2s ease;}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-.card.buy{background:var(--green-bg);border-color:var(--green-border);}
-.card.skip{background:var(--red-bg);border-color:var(--red-border);}
-.card.loading{background:var(--bg2);border-color:var(--border);}
-.card.error{background:var(--bg2);border-color:var(--red-border);}
-.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;margin-bottom:8px;}
-.card.buy .badge{background:#14532d;color:var(--green);}
-.card.skip .badge{background:#450a0a;color:var(--red);}
-.card.loading .badge{background:var(--bg3);color:var(--text2);}
-.card.error .badge{background:#450a0a;color:var(--red);}
-.ctitle{font-size:15px;font-weight:700;padding-right:28px;line-height:1.4;margin-bottom:3px;}
-.cauthor{font-size:12px;color:var(--text2);margin-bottom:10px;}
-.demo{font-size:10px;color:var(--text3);margin-left:6px;font-weight:400;}
-.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.si{background:rgba(0,0,0,.2);border-radius:8px;padding:7px 10px;}
-.si.full{grid-column:span 2;}
-.slb{font-size:10px;color:var(--text3);margin-bottom:2px;}
-.sv{font-size:13px;font-weight:700;}
-.sv.good{color:var(--green);}
-.sv.bad{color:var(--red);}
-.sv.neutral{color:var(--text);}
-.rbtn{position:absolute;top:10px;right:10px;background:none;border:none;color:var(--text3);font-size:18px;padding:4px;line-height:1;}
-.pulse{display:inline-block;animation:pulse 1s ease-in-out infinite;}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+/* ── PANEL ── */
+.panel {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+}
+.sec-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--gold);
+  display: block;
+  margin-bottom: 14px;
+}
+.field { margin-bottom: 12px; }
+.field:last-of-type { margin-bottom: 0; }
+.field label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text3);
+  display: block;
+  margin-bottom: 6px;
+}
+.field input, .field select {
+  width: 100%;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text);
+  transition: border-color .2s;
+}
+.field input:focus, .field select:focus { border-color: var(--gold-dim); }
+.field select option { background: #1a1820; }
+hr.div { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.note { font-size: 10px; color: var(--text3); margin-top: 8px; letter-spacing: 0.03em; }
+.save-btn {
+  width: 100%;
+  margin-top: 16px;
+  padding: 13px;
+  background: transparent;
+  border: 1px solid var(--gold-dim);
+  border-radius: 8px;
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  transition: background .2s, border-color .2s;
+}
+.save-btn:hover { background: rgba(212,175,55,0.08); border-color: var(--gold); }
+.saved { display:none; text-align:center; font-size:11px; color:var(--green); margin-top:8px; letter-spacing:.05em; }
 
-.empty{text-align:center;padding:48px 0;color:var(--text3);}
-.eicon{font-size:48px;margin-bottom:12px;}
-.etext{font-size:14px;line-height:1.8;}
+/* ── PROGRESS ── */
+.prog {
+  background: var(--card-bg);
+  border: 1px solid var(--border-bright);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.prog-top { display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:12px; color:var(--text2); letter-spacing:.03em; }
+.spin {
+  width: 14px; height: 14px;
+  border: 1.5px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.prog-bar-wrap { background: rgba(255,255,255,0.04); border-radius: 99px; height: 2px; overflow: hidden; }
+.prog-bar { height: 2px; border-radius: 99px; background: linear-gradient(90deg,var(--gold),var(--gold-light)); transition: width .5s ease; }
 
-.logbox{background:#050505;border:1px solid var(--border);color:#00ff88;font-size:10px;font-family:monospace;padding:10px;border-radius:8px;margin-bottom:12px;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;}
+/* ── WARN ── */
+.warn {
+  background: rgba(251,191,36,0.06);
+  border: 1px solid rgba(251,191,36,0.25);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 11px;
+  color: #fbbf24;
+  margin-bottom: 16px;
+  letter-spacing: .03em;
+}
 
-.bottombar{position:fixed;bottom:0;left:0;right:0;background:rgba(15,15,15,.96);backdrop-filter:blur(12px);border-top:1px solid var(--border);padding:12px 16px;}
-.btns{display:flex;gap:8px;}
-.scanbtn{flex:1;padding:15px;background:linear-gradient(135deg,#1e1b4b,#312e81);border:1px solid #4338ca;border-radius:var(--r);color:#c7d2fe;font-size:15px;font-weight:700;}
-.stopbtn{padding:15px 18px;background:#450a0a;border:1px solid var(--red-border);border-radius:var(--r);color:var(--red);font-size:14px;font-weight:700;}
+/* ── CARDS ── */
+.card {
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 10px;
+  position: relative;
+  border: 1px solid;
+  animation: fadeUp .25s ease;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+}
+@keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+.card.buy {
+  background: var(--green-bg);
+  border-color: var(--green-border);
+}
+.card.buy::before { background: linear-gradient(90deg,transparent,rgba(74,222,128,0.3),transparent); }
+
+.card.skip {
+  background: var(--red-bg);
+  border-color: var(--red-border);
+}
+.card.skip::before { background: linear-gradient(90deg,transparent,rgba(248,113,113,0.2),transparent); }
+
+.card.loading { background: var(--card-bg); border-color: var(--border); }
+.card.error { background: var(--card-bg); border-color: var(--red-border); }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 99px;
+  margin-bottom: 10px;
+}
+.card.buy .badge { background: rgba(74,222,128,0.12); color: var(--green); border: 1px solid rgba(74,222,128,0.25); }
+.card.skip .badge { background: rgba(248,113,113,0.1); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+.card.loading .badge { background: rgba(255,255,255,0.04); color: var(--text3); border: 1px solid var(--border); }
+.card.error .badge { background: rgba(248,113,113,0.1); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+
+.ctitle {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 17px;
+  font-weight: 400;
+  padding-right: 28px;
+  line-height: 1.4;
+  margin-bottom: 3px;
+  color: var(--text);
+}
+.cauthor {
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+.demo { font-size: 9px; color: var(--text3); margin-left: 8px; letter-spacing: 0.05em; }
+
+.sgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.si {
+  background: rgba(0,0,0,0.25);
+  border-radius: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255,255,255,0.03);
+}
+.si.full { grid-column: span 2; }
+.slb { font-size: 9px; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 3px; }
+.sv { font-size: 14px; font-weight: 500; }
+.sv.g { color: var(--green); }
+.sv.b { color: var(--red); }
+.sv.n { color: var(--text2); }
+
+.rbtn {
+  position: absolute; top: 14px; right: 14px;
+  background: none; border: none;
+  color: var(--text3); font-size: 16px; padding: 4px; line-height: 1;
+  transition: color .2s;
+}
+.rbtn:hover { color: var(--red); }
+
+.pulse { display: inline-block; animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ── EMPTY ── */
+.empty {
+  text-align: center;
+  padding: 60px 0;
+  color: var(--text3);
+}
+.eicon { font-size: 40px; margin-bottom: 16px; opacity: .5; }
+.etitle {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px;
+  font-weight: 300;
+  letter-spacing: 0.1em;
+  color: var(--text2);
+  margin-bottom: 8px;
+}
+.etext { font-size: 11px; line-height: 1.8; letter-spacing: 0.05em; color: var(--text3); }
+
+/* ── LOG ── */
+.logbox {
+  background: #040304;
+  border: 1px solid var(--border);
+  color: #7dff9a;
+  font-size: 9px;
+  font-family: 'Courier New', monospace;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  max-height: 180px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  letter-spacing: 0.03em;
+}
+
+/* ── BOTTOM BAR ── */
+.bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(8,6,8,0.95);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border);
+  padding: 14px 16px;
+}
+.bar::before {
+  content: '';
+  position: absolute;
+  top: -1px; left: 20%; right: 20%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+}
+.bar-btns { display: flex; gap: 10px; }
+
+.scan-btn {
+  flex: 1;
+  padding: 15px;
+  background: transparent;
+  border: 1px solid var(--gold-dim);
+  border-radius: 10px;
+  color: var(--gold);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  position: relative;
+  overflow: hidden;
+  transition: border-color .2s, background .2s;
+}
+.scan-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(212,175,55,0.08), transparent);
+  opacity: 0;
+  transition: opacity .2s;
+}
+.scan-btn:hover { border-color: var(--gold); }
+.scan-btn:hover::before { opacity: 1; }
+.scan-btn:active { background: rgba(212,175,55,0.1); }
+
+.stop-btn {
+  padding: 15px 20px;
+  background: transparent;
+  border: 1px solid var(--red-border);
+  border-radius: 10px;
+  color: var(--red);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  transition: background .2s;
+}
+.stop-btn:hover { background: rgba(248,113,113,0.08); }
+
+/* ── DIVIDER LINE ── */
+.gold-line {
+  width: 40px; height: 1px;
+  background: var(--gold);
+  margin: 0 auto 24px;
+  opacity: 0.5;
+}
 </style>
 </head>
 <body>
 
-<div class="header">
-  <div>
-    <div class="title">Veil<span>Search</span></div>
-    <div class="stats" id="stats"></div>
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="hdr-title">Veil <span>Search</span></div>
+    <div class="hdr-sub">Book Research System</div>
+    <div class="hdr-stats" id="stats"></div>
   </div>
-  <div class="hbtns">
-    <button class="ibtn" onclick="resetAll()">🗑️</button>
-    <button class="ibtn" onclick="toggleLog()">🔍</button>
-    <button class="ibtn" onclick="toggleSettings()">⚙️ 設定</button>
+  <div class="hdr-btns">
+    <button class="ibtn" onclick="resetAll()" title="リセット">🗑</button>
+    <button class="ibtn" onclick="toggleLog()" title="ログ">◈</button>
+    <button class="ibtn" onclick="toggleSettings()">設定</button>
   </div>
 </div>
 
 <div id="warn" style="display:none" class="warn"></div>
-<div id="progress" style="display:none"></div>
+<div id="prog" style="display:none"></div>
 <div id="settings" style="display:none"></div>
 <div id="logbox" style="display:none"></div>
 <div id="books"></div>
 
-<div class="bottombar">
-  <div class="btns">
-    <button class="scanbtn" id="scanbtn" onclick="startScan()">📷 Research</button>
-    <button class="stopbtn" id="stopbtn" style="display:none" onclick="stopScan()">■ 終了</button>
+<div class="bar">
+  <div class="bar-btns">
+    <button class="scan-btn" id="scanbtn" onclick="startScan()">◎ Research</button>
+    <button class="stop-btn" id="stopbtn" style="display:none" onclick="stopScan()">■ Stop</button>
   </div>
 </div>
 <input type="file" id="fileinput" accept="image/*" capture="environment" style="display:none" onchange="onFile(this)">
 
 <script>
-// ===== STATE =====
-const S = {
-  geminiKey:'', keepaKey:'',
-  buyPrice:100, shippingCost:500, conditionGrade:'used',
+var S={
+  geminiKey:'',keepaKey:'',
+  buyPrice:100,shippingCost:500,conditionGrade:'used',
   thresholds:{minProfit:300,maxSalesRank:300000,maxSellers:5,minListPrice:500},
-  books:[], showSettings:false, showLog:false,
-  logs:[], counter:0, scanning:false,
+  books:[],showSettings:false,showLog:false,
+  logs:[],counter:0
 };
 
-(function(){
-  try {
-    const s = JSON.parse(localStorage.getItem('vs3')||'{}');
-    if(s.geminiKey) S.geminiKey=s.geminiKey;
-    if(s.keepaKey) S.keepaKey=s.keepaKey;
-    if(s.buyPrice!=null) S.buyPrice=s.buyPrice;
-    if(s.shippingCost!=null) S.shippingCost=s.shippingCost;
-    if(s.conditionGrade) S.conditionGrade=s.conditionGrade;
-    if(s.thresholds) S.thresholds={...S.thresholds,...s.thresholds};
-  } catch(e){}
-})();
+try{
+  var sv=JSON.parse(localStorage.getItem('vs5')||'{}');
+  if(sv.geminiKey)S.geminiKey=sv.geminiKey;
+  if(sv.keepaKey)S.keepaKey=sv.keepaKey;
+  if(sv.buyPrice!=null)S.buyPrice=sv.buyPrice;
+  if(sv.shippingCost!=null)S.shippingCost=sv.shippingCost;
+  if(sv.conditionGrade)S.conditionGrade=sv.conditionGrade;
+  if(sv.thresholds)S.thresholds=Object.assign({},S.thresholds,sv.thresholds);
+}catch(e){}
 
 function persist(){
-  try{localStorage.setItem('vs3',JSON.stringify({
+  try{localStorage.setItem('vs5',JSON.stringify({
     geminiKey:S.geminiKey,keepaKey:S.keepaKey,
     buyPrice:S.buyPrice,shippingCost:S.shippingCost,
     conditionGrade:S.conditionGrade,thresholds:S.thresholds
   }));}catch(e){}
 }
 
-// ===== LOG =====
 function log(m){
-  const t=new Date().toLocaleTimeString('ja-JP');
-  S.logs.unshift(`[${t}] ${m}`);
-  if(S.logs.length>200) S.logs.pop();
-  if(S.showLog) renderLog();
+  var t=new Date().toLocaleTimeString('ja-JP');
+  S.logs.unshift('['+t+'] '+m);
+  if(S.logs.length>200)S.logs.pop();
+  if(S.showLog)renderLog();
 }
 
-// ===== CLASSIFY =====
 function getPrice(k){
-  if(S.conditionGrade==='vgood') return k.priceVGood??k.currentPrice;
-  if(S.conditionGrade==='good') return k.priceGood??k.currentPrice;
+  if(S.conditionGrade==='vgood')return k.priceVGood!=null?k.priceVGood:k.currentPrice;
+  if(S.conditionGrade==='good')return k.priceGood!=null?k.priceGood:k.currentPrice;
   return k.currentPrice;
 }
+
 function classify(k,bp){
-  const {minProfit,maxSalesRank,maxSellers,minListPrice}=S.thresholds;
-  const sp=getPrice(k);
-  const fee=Math.floor(sp*0.165);
-  const profit=Math.floor(sp-bp-S.shippingCost-fee);
-  return(profit>=minProfit&&k.salesRank<=maxSalesRank&&k.sellerCount<=maxSellers&&sp>=minListPrice&&!k.priceDropRisk)?'buy':'skip';
+  var t=S.thresholds;
+  var sp=getPrice(k);
+  var fee=Math.floor(sp*0.165);
+  var profit=Math.floor(sp-bp-S.shippingCost-fee);
+  return(profit>=t.minProfit&&k.salesRank<=t.maxSalesRank&&k.sellerCount<=t.maxSellers&&sp>=t.minListPrice&&!k.priceDropRisk)?'buy':'skip';
 }
 
-// ===== IMAGE =====
-function resizeImg(file,maxPx=1536){
-  return new Promise((res,rej)=>{
-    const img=new Image();
-    const url=URL.createObjectURL(file);
-    img.onload=()=>{
-      let w=img.width,h=img.height;
-      if(w>maxPx||h>maxPx){
-        if(w>h){h=Math.round(h*maxPx/w);w=maxPx;}
-        else{w=Math.round(w*maxPx/h);h=maxPx;}
-      }
-      const c=document.createElement('canvas');
+function resizeImg(file){
+  return new Promise(function(res,rej){
+    var img=new Image();
+    var url=URL.createObjectURL(file);
+    img.onload=function(){
+      var w=img.width,h=img.height,mx=1536;
+      if(w>mx||h>mx){if(w>h){h=Math.round(h*mx/w);w=mx;}else{w=Math.round(w*mx/h);h=mx;}}
+      var c=document.createElement('canvas');
       c.width=w;c.height=h;
       c.getContext('2d').drawImage(img,0,0,w,h);
       URL.revokeObjectURL(url);
-      res({b64:c.toDataURL('image/jpeg',.85).split(',')[1],w,h,canvas:c});
+      res({b64:c.toDataURL('image/jpeg',.85).split(',')[1],w:w,h:h,canvas:c});
     };
-    img.onerror=rej;
-    img.src=url;
+    img.onerror=rej;img.src=url;
   });
 }
 
-// ===== GEMINI =====
-async function callGemini(b64,prompt,maxTokens=2000){
-  const r=await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${S.geminiKey}`,
+function callGemini(b64,prompt){
+  return fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+S.geminiKey,
     {method:'POST',headers:{'Content-Type':'application/json'},
      body:JSON.stringify({
        system_instruction:{parts:[{text:'JSONのみ返すAPIです。マークダウン不要。'}]},
-       contents:[{parts:[
-         {inline_data:{mime_type:'image/jpeg',data:b64}},
-         {text:prompt}
-       ]}],
-       generationConfig:{maxOutputTokens:maxTokens,temperature:1,thinkingConfig:{thinkingBudget:0}}
+       contents:[{parts:[{inline_data:{mime_type:'image/jpeg',data:b64}},{text:prompt}]}],
+       generationConfig:{maxOutputTokens:4096,temperature:1,thinkingConfig:{thinkingBudget:0}}
      })
     }
-  );
-  if(!r.ok){
-    const e=await r.text();
-    let msg='';try{msg=JSON.parse(e)?.error?.message||'';}catch{}
-    throw new Error(`Gemini ${r.status}: ${msg||e.slice(0,80)}`);
-  }
-  const d=await r.json();
-  return d.candidates?.[0]?.content?.parts?.[0]?.text||'';
+  ).then(function(r){
+    if(!r.ok)return r.text().then(function(e){
+      var msg='';try{msg=JSON.parse(e).error.message;}catch(x){}
+      throw new Error('Gemini '+r.status+': '+(msg||e.slice(0,80)));
+    });
+    return r.json();
+  }).then(function(d){
+    return(d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts&&d.candidates[0].content.parts[0]&&d.candidates[0].content.parts[0].text)||'';
+  });
 }
 
 function parseJSON(text){
-  let t=text.replace(/```json/gi,'').replace(/```/g,'').trim();
-  const s=t.indexOf('['),e=t.lastIndexOf(']');
-  if(s!==-1&&e>s){try{return JSON.parse(t.slice(s,e+1));}catch{}}
-  const s2=t.indexOf('{'),e2=t.lastIndexOf('}');
-  if(s2!==-1&&e2>s2){try{return[JSON.parse(t.slice(s2,e2+1))];}catch{}}
+  var t=text.replace(/```json/gi,'').replace(/```/g,'').trim();
+  var s=t.indexOf('['),e=t.lastIndexOf(']');
+  if(s!==-1&&e>s){try{return JSON.parse(t.slice(s,e+1));}catch(x){}}
+  var s2=t.indexOf('{'),e2=t.lastIndexOf('}');
+  if(s2!==-1&&e2>s2){try{return[JSON.parse(t.slice(s2,e2+1))];}catch(x){}}
   return null;
 }
 
-async function extractBooks(file){
-  const {b64,w,h,canvas}=await resizeImg(file);
-  log(`画像: ${w}x${h}`);
-
-  // 左右2分割・2倍拡大
-  const tiles=[];
-  const half=Math.ceil(w/2);
-  for(let i=0;i<2;i++){
-    const sx=i*half,sw=Math.min(half,w-sx);
-    const c=document.createElement('canvas');
-    c.width=sw*2;c.height=h*2;
-    const ctx=c.getContext('2d');
-    ctx.imageSmoothingEnabled=true;
-    ctx.imageSmoothingQuality='high';
-    ctx.drawImage(canvas,sx,0,sw,h,0,0,sw*2,h*2);
-    tiles.push(c.toDataURL('image/jpeg',.9).split(',')[1]);
-  }
-
-  const prompt=`この本棚の背表紙を読んでください。
-絶対に守るルール：
-- 実際に写っている本だけ報告する
-- 見えた文字をそのまま書く（推測・補完・創作禁止）
-- 帯は無視する
-- 1冊から1タイトルのみ
-
-[{"title":"タイトル","author":"著者またはnull"}]`;
-
-  const results=await Promise.all(tiles.map(async(t,i)=>{
-    log(`タイル${i+1}/2 送信`);
-    try{
-      const raw=await callGemini(t,prompt,4096);
-      log(`タイル${i+1}返答(${raw.length}文字)`);
-      return parseJSON(raw)||[];
-    }catch(e){log(`タイル${i+1}エラー: ${e.message}`);return[];}
-  }));
-
-  const seen=new Set();
-  const books=results.flat().filter(b=>{
-    if(!b.title||b.title.trim().length<=4) return false;
-    const k=b.title.trim().slice(0,15);
-    if(seen.has(k)) return false;
-    seen.add(k);return true;
+function extractBooks(file){
+  return resizeImg(file).then(function(img){
+    log('画像: '+img.w+'x'+img.h);
+    var tiles=[];
+    var half=Math.ceil(img.w/2);
+    for(var i=0;i<2;i++){
+      var sx=i*half,sw=Math.min(half,img.w-sx);
+      var c=document.createElement('canvas');
+      c.width=sw*2;c.height=img.h*2;
+      var ctx=c.getContext('2d');
+      ctx.imageSmoothingEnabled=true;
+      ctx.imageSmoothingQuality='high';
+      ctx.drawImage(img.canvas,sx,0,sw,img.h,0,0,sw*2,img.h*2);
+      tiles.push(c.toDataURL('image/jpeg',.9).split(',')[1]);
+    }
+    var prompt='この本棚の背表紙を読んでください。\n絶対に守るルール：\n- 実際に写っている本だけ報告する\n- 見えた文字をそのまま書く（推測・補完・創作禁止）\n- 帯は無視する\n- 1冊から1タイトルのみ\n\n[{"title":"タイトル","author":"著者またはnull"}]';
+    return Promise.all(tiles.map(function(t,i){
+      log('タイル'+(i+1)+'/2 送信');
+      return callGemini(t,prompt).then(function(raw){
+        log('タイル'+(i+1)+'返答('+raw.length+'文字)');
+        return parseJSON(raw)||[];
+      }).catch(function(e){log('タイルエラー: '+e.message);return[];});
+    })).then(function(results){
+      var seen={};var books=[];
+      results.forEach(function(arr){
+        arr.forEach(function(b){
+          if(!b.title||b.title.trim().length<=4)return;
+          var k=b.title.trim().slice(0,15);
+          if(seen[k])return;
+          seen[k]=true;books.push(b);
+        });
+      });
+      log('認識: '+books.length+'冊');
+      return books;
+    });
   });
-  log(`認識: ${books.length}冊`);
-  return books;
 }
 
-// ===== ISBN (CiNii) =====
-async function lookupIsbn(title,author){
-  const t=title.replace(/^[ぁ-ん一-龯]\s*\d+-\d+\s*/g,'').replace(/[のをがはにとでやなまへも]$/,'').trim()||title;
-  log(`ISBN検索: ${t.slice(0,25)}`);
-  try{
-    const r=await fetch(`https://cir.nii.ac.jp/opensearch/books?title=${encodeURIComponent(t)}&format=json&count=1`);
-    const d=await r.json();
-    const item=d.items?.[0];
-    if(!item){log(`ISBN見つからず: ${t.slice(0,20)}`);return null;}
-    const ids=item['dc:identifier'];
-    const obj=Array.isArray(ids)?ids.find(i=>i['@type']==='cir:ISBN'):null;
-    if(obj?.['@value']){log(`CiNii: ${obj['@value']}`);return obj['@value'];}
-  }catch(e){log(`CiNiiエラー: ${e.message}`);}
-  log(`ISBN見つからず: ${t.slice(0,20)}`);
-  return null;
+function lookupIsbn(title){
+  var t=title.replace(/^[ぁ-ん一-龯]\s*\d+-\d+\s*/g,'').replace(/[のをがはにとでやなまへも]$/,'').trim()||title;
+  log('ISBN検索: '+t.slice(0,25));
+  return fetch('https://cir.nii.ac.jp/opensearch/books?title='+encodeURIComponent(t)+'&format=json&count=1')
+  .then(function(r){return r.json();})
+  .then(function(d){
+    var item=d.items&&d.items[0];
+    if(!item){log('ISBN見つからず');return null;}
+    var ids=item['dc:identifier'];
+    if(!Array.isArray(ids)){return null;}
+    var obj=ids.find(function(i){return i['@type']==='cir:ISBN';});
+    if(obj&&obj['@value']){log('CiNii: '+obj['@value']);return obj['@value'];}
+    return null;
+  }).catch(function(e){log('CiNiiエラー: '+e.message);return null;});
 }
 
-// ===== KEEPA =====
-async function fetchKeepa(isbn){
+function fetchKeepa(isbn){
   if(!S.keepaKey){
-    await new Promise(r=>setTimeout(r,100));
-    const cur=Math.floor(Math.random()*3000)+500;
-    return{currentPrice:cur,priceGood:Math.floor(cur*1.1),priceVGood:Math.floor(cur*1.2),salesRank:Math.floor(Math.random()*500000)+1000,sellerCount:Math.floor(Math.random()*10)+1,priceDropRisk:Math.random()>.6,isDemo:true};
+    return new Promise(function(res){
+      setTimeout(function(){
+        var cur=Math.floor(Math.random()*3000)+500;
+        res({currentPrice:cur,priceGood:Math.floor(cur*1.1),priceVGood:Math.floor(cur*1.2),
+          salesRank:Math.floor(Math.random()*500000)+1000,sellerCount:Math.floor(Math.random()*10)+1,
+          priceDropRisk:Math.random()>.6,isDemo:true});
+      },100);
+    });
   }
-  if(!isbn) return null;
-  for(let attempt=0;attempt<10;attempt++){
-    try{
-      log(`Keepa: ${isbn}${attempt>0?` (retry ${attempt})`:''}`);
-      const r=await fetch(`https://api.keepa.com/product?key=${S.keepaKey}&domain=5&code=${isbn}&stats=1`);
-      const d=await r.json();
+  if(!isbn)return Promise.resolve(null);
+  function attempt(n){
+    if(n>=10){log('Keepa: リトライ上限');return Promise.resolve(null);}
+    log('Keepa: '+isbn+(n>0?' retry'+n:''));
+    return fetch('https://api.keepa.com/product?key='+S.keepaKey+'&domain=5&code='+isbn+'&stats=1')
+    .then(function(r){return r.json();})
+    .then(function(d){
       if(d.tokensLeft===0){
-        const refillIn=d.refillIn||60000;
-        log(`トークン不足 → ${Math.ceil(refillIn/1000)}秒待機`);
-        await new Promise(r=>setTimeout(r,refillIn+500));
-        continue;
+        var wait=(d.refillIn||60000)+500;
+        log('トークン不足→'+Math.ceil(wait/1000)+'秒待機');
+        return new Promise(function(res){setTimeout(res,wait);}).then(function(){return attempt(n+1);});
       }
-      const p=d.products?.[0];
+      var p=d.products&&d.products[0];
       if(!p){log('Keepa: 商品なし');return null;}
-      const gl=(idx)=>{const a=p.csv?.[idx]?.filter(v=>v>0)||[];return a.length?a.slice(-1)[0]/100:null;};
-      const cur=gl(1)||gl(0)||0;
-      const arr=p.csv?.[1]?.filter(v=>v>0)||[];
-      const avg=arr.slice(-20).reduce((a,b)=>a+b,0)/(arr.slice(-20).length||1);
+      function gl(idx){var a=(p.csv&&p.csv[idx]||[]).filter(function(v){return v>0;});return a.length?a[a.length-1]/100:null;}
+      var cur=gl(1)||gl(0)||0;
+      var arr=(p.csv&&p.csv[1]||[]).filter(function(v){return v>0;});
+      var recent=arr.slice(-20);
+      var avg=recent.length?recent.reduce(function(a,b){return a+b;},0)/recent.length:0;
       log('Keepa: 成功');
       return{
         currentPrice:Math.floor(cur),
         priceGood:gl(2)?Math.floor(gl(2)):null,
         priceVGood:gl(3)?Math.floor(gl(3)):null,
-        salesRank:p.salesRanks?.['book']?.slice(-1)[0]||0,
-        sellerCount:p.stats?.buyBoxSellerCount?.[1]||0,
+        salesRank:(p.salesRanks&&p.salesRanks['book']&&p.salesRanks['book'].slice(-1)[0])||0,
+        sellerCount:(p.stats&&p.stats.buyBoxSellerCount&&p.stats.buyBoxSellerCount[1])||0,
         priceDropRisk:cur>0&&cur<avg/100*.85,
-        isDemo:false,
+        isDemo:false
       };
-    }catch(e){log(`Keepaエラー: ${e.message}`);return null;}
+    }).catch(function(e){log('Keepaエラー: '+e.message);return null;});
   }
-  log('Keepa: リトライ上限');
-  return null;
+  return attempt(0);
+}
 
-// ===== PROCESSING =====
-let contMode=false;
+var contMode=false;
 
 function startScan(){
   if(!S.geminiKey){
-    document.getElementById('warn').textContent='⚠️ 設定からGemini APIキーを入力してください';
+    document.getElementById('warn').textContent='— Gemini APIキーを設定してください';
     document.getElementById('warn').style.display='';
     S.showSettings=true;renderSettings();return;
   }
   contMode=true;
   document.getElementById('stopbtn').style.display='';
-  document.getElementById('scanbtn').textContent='📷 Research';
+  document.getElementById('scanbtn').textContent='◎ Research';
   document.getElementById('fileinput').click();
 }
 
 function stopScan(){
   contMode=false;
   document.getElementById('stopbtn').style.display='none';
-  document.getElementById('scanbtn').textContent='📷 撮影開始';
+  document.getElementById('scanbtn').textContent='◎ Research';
 }
 
-async function onFile(input){
-  const file=input.files[0];
+function onFile(input){
+  var file=input.files[0];
   input.value='';
   if(!file){stopScan();return;}
-  if(contMode) setTimeout(()=>{if(contMode) document.getElementById('fileinput').click();},800);
-
-  log(`処理開始: ${file.name}`);
-  showProg('🔮 Geminiで認識中...',10);
-  try{
-    const bookList=await extractBooks(file);
-    if(!bookList.length){showProg('本が認識できませんでした',100);setTimeout(hideProg,2000);return;}
-    showProg(`📚 ${bookList.length}冊認識 → データ取得中...`,40);
-
-    const entries=bookList.map(book=>{
-      const id=++S.counter;
-      S.books.unshift({id,status:'loading',bookInfo:book,keepa:null,verdict:'loading',buyPrice:S.buyPrice});
-      return{id,book};
+  if(contMode)setTimeout(function(){if(contMode)document.getElementById('fileinput').click();},800);
+  log('処理開始: '+file.name);
+  showProg('Gemini — 画像認識中...',10);
+  extractBooks(file).then(function(bookList){
+    if(!bookList.length){showProg('書籍を認識できませんでした',100);setTimeout(hideProg,2000);return;}
+    showProg(bookList.length+'冊認識 — データ取得中...',40);
+    var entries=bookList.map(function(book){
+      var id=++S.counter;
+      S.books.unshift({id:id,status:'loading',bookInfo:book,keepa:null,verdict:'loading',buyPrice:S.buyPrice});
+      return{id:id,book:book};
     });
     renderBooks();renderHeader();
-
-    let done=0;
-    // 1冊ずつ順番に処理（トークンを無駄にしない）
-    for(const {id,book} of entries){
-      try{
-        const isbn=await lookupIsbn(book.title,book.author);
-        const keepa=isbn?await fetchKeepa(isbn):null;
-        const verdict=keepa?classify(keepa,S.buyPrice):'unknown';
-        updateBook(id,{isbn,keepa,verdict,status:'done'});
-        log(`完了: ${book.title?.slice(0,20)} → ${verdict}`);
-      }catch(e){
-        log(`エラー: ${e.message}`);
-        updateBook(id,{status:'error',verdict:'error'});
+    function processNext(i){
+      if(i>=entries.length){
+        showProg(bookList.length+'冊 — 完了',100);
+        setTimeout(hideProg,1500);return;
       }
-      done++;
-      showProg(`📚 取得中... (${done}/${entries.length})`,40+Math.round(done/entries.length*55));
+      var entry=entries[i];
+      showProg('取得中... '+(i+1)+' / '+entries.length,40+Math.round((i+1)/entries.length*55));
+      lookupIsbn(entry.book.title).then(function(isbn){
+        return isbn?fetchKeepa(isbn):Promise.resolve(null);
+      }).then(function(keepa){
+        var verdict=keepa?classify(keepa,S.buyPrice):'unknown';
+        updateBook(entry.id,{keepa:keepa,verdict:verdict,status:'done'});
+        log('完了: '+(entry.book.title||'').slice(0,20)+' → '+verdict);
+      }).catch(function(e){
+        log('エラー: '+e.message);
+        updateBook(entry.id,{status:'error',verdict:'error'});
+      }).then(function(){processNext(i+1);});
     }
-    showProg(`✅ ${bookList.length}冊完了！`,100);
-    setTimeout(hideProg,1500);
-  }catch(e){
-    log(`エラー: ${e.message}`);
-    showProg(`❌ ${e.message}`,100);
+    processNext(0);
+  }).catch(function(e){
+    log('エラー: '+e.message);
+    showProg('Error: '+e.message,100);
     setTimeout(hideProg,3000);
-  }
+  });
 }
 
 function updateBook(id,patch){
-  S.books=S.books.map(b=>b.id===id?{...b,...patch}:b);
+  S.books=S.books.map(function(b){return b.id===id?Object.assign({},b,patch):b;});
   renderBooks();renderHeader();
 }
-function removeBook(id){S.books=S.books.filter(b=>b.id!==id);renderBooks();renderHeader();}
+function removeBook(id){S.books=S.books.filter(function(b){return b.id!==id;});renderBooks();renderHeader();}
 function recheckAll(){
-  S.books=S.books.map(b=>b.keepa&&b.status==='done'?{...b,verdict:classify(b.keepa,b.buyPrice)}:b);
+  S.books=S.books.map(function(b){
+    return(b.keepa&&b.status==='done')?Object.assign({},b,{verdict:classify(b.keepa,b.buyPrice)}):b;
+  });
   renderBooks();renderHeader();
 }
 function resetAll(){S.books=[];S.counter=0;S.logs=[];renderBooks();renderHeader();renderLog();hideProg();}
 
-// ===== RENDER =====
 function renderHeader(){
-  const buy=S.books.filter(b=>b.verdict==='buy').length;
-  const skip=S.books.filter(b=>b.verdict==='skip').length;
-  document.getElementById('stats').innerHTML=S.books.length?`<span class="buy">買い ${buy}冊</span>　<span class="skip">スキップ ${skip}冊</span>`:'';
+  var buy=S.books.filter(function(b){return b.verdict==='buy';}).length;
+  var skip=S.books.filter(function(b){return b.verdict==='skip';}).length;
+  document.getElementById('stats').innerHTML=S.books.length?
+    '<span class="buy">'+buy+' acquired</span>　<span class="skip">'+skip+' passed</span>':'';
 }
 
 function showProg(msg,pct){
-  const el=document.getElementById('progress');
-  el.style.display='';el.className='progress';
-  el.innerHTML=`<div class="ptop">${pct>=100?'<span>✅</span>':'<div class="spinner"></div>'}<span>${msg}</span></div><div class="pbar-wrap"><div class="pbar" style="width:${pct}%"></div></div>`;
+  var el=document.getElementById('prog');
+  el.style.display='';el.className='prog';
+  el.innerHTML='<div class="prog-top">'+(pct>=100?'<span style="color:var(--gold)">◆</span>':'<div class="spin"></div>')+'<span>'+msg+'</span></div>'+
+    '<div class="prog-bar-wrap"><div class="prog-bar" style="width:'+pct+'%"></div></div>';
 }
-function hideProg(){document.getElementById('progress').style.display='none';}
+function hideProg(){document.getElementById('prog').style.display='none';}
 
 function renderLog(){
-  const el=document.getElementById('logbox');
+  var el=document.getElementById('logbox');
   if(!S.showLog){el.style.display='none';return;}
   el.className='logbox';el.style.display='';
-  el.textContent=S.logs.join('\n')||'ログなし';
+  el.textContent=S.logs.join('\n')||'— no logs —';
 }
 
 function renderSettings(){
-  const el=document.getElementById('settings');
+  var el=document.getElementById('settings');
   if(!S.showSettings){el.style.display='none';return;}
-  el.className='settings';el.style.display='';
-  const{minProfit,maxSalesRank,maxSellers,minListPrice}=S.thresholds;
-  el.innerHTML=`
-    <div class="slabel">APIキー</div>
-    <div class="field"><label>Gemini APIキー（必須）</label><input type="text" value="${S.geminiKey}" placeholder="AIzaSy..." oninput="S.geminiKey=this.value"></div>
-    <div class="field"><label>Keepa APIキー（未入力はデモ）</label><input type="text" value="${S.keepaKey}" placeholder="任意" oninput="S.keepaKey=this.value"></div>
-    <hr class="divider">
-    <div class="slabel">仕入れ設定</div>
-    <div class="field"><label>仕入れ価格（円）</label><input type="text" inputmode="numeric" value="${S.buyPrice}" oninput="S.buyPrice=Number(this.value)||0"></div>
-    <div class="field"><label>送料（円）</label><input type="text" inputmode="numeric" value="${S.shippingCost}" oninput="S.shippingCost=Number(this.value)||0"></div>
-    <div class="field"><label>参照コンディション</label>
-      <select oninput="S.conditionGrade=this.value">
-        <option value="used" ${S.conditionGrade==='used'?'selected':''}>可以上（最安値）</option>
-        <option value="good" ${S.conditionGrade==='good'?'selected':''}>良い以上</option>
-        <option value="vgood" ${S.conditionGrade==='vgood'?'selected':''}>非常に良い以上</option>
-      </select>
-    </div>
-    <p class="tnote">Amazon手数料16.5%を自動計算</p>
-    <hr class="divider">
-    <div class="slabel">買い判定基準</div>
-    <div class="field"><label>最低利益額（¥以上）</label><input type="text" inputmode="numeric" value="${minProfit}" oninput="S.thresholds.minProfit=Number(this.value)||0"></div>
-    <div class="field"><label>Sales Rank 上限（以下）</label><input type="text" inputmode="numeric" value="${maxSalesRank}" oninput="S.thresholds.maxSalesRank=Number(this.value)||0"></div>
-    <div class="field"><label>出品者数 上限（人以下）</label><input type="text" inputmode="numeric" value="${maxSellers}" oninput="S.thresholds.maxSellers=Number(this.value)||0"></div>
-    <div class="field"><label>出品最低価格（¥以上）</label><input type="text" inputmode="numeric" value="${minListPrice}" oninput="S.thresholds.minListPrice=Number(this.value)||0"></div>
-    <p class="tnote">条件変更で既存結果も即再判定</p>
-    <button class="savebtn" onclick="saveSettings()">💾 設定を保存</button>
-    <div class="savemsg" id="savemsg">✓ 保存しました</div>`;
+  el.className='panel';el.style.display='';
+  var t=S.thresholds;
+  el.innerHTML=
+    '<span class="sec-label">API Configuration</span>'+
+    '<div class="field"><label>Gemini API Key</label><input type="text" value="'+S.geminiKey+'" placeholder="AIzaSy..." oninput="S.geminiKey=this.value"></div>'+
+    '<div class="field"><label>Keepa API Key</label><input type="text" value="'+S.keepaKey+'" placeholder="Optional — demo mode if empty" oninput="S.keepaKey=this.value"></div>'+
+    '<hr class="div">'+
+    '<span class="sec-label">Purchase Settings</span>'+
+    '<div class="field"><label>仕入れ価格（円）</label><input type="text" inputmode="numeric" value="'+S.buyPrice+'" oninput="S.buyPrice=Number(this.value)||0"></div>'+
+    '<div class="field"><label>送料（円）</label><input type="text" inputmode="numeric" value="'+S.shippingCost+'" oninput="S.shippingCost=Number(this.value)||0"></div>'+
+    '<div class="field"><label>Condition Grade</label>'+
+    '<select oninput="S.conditionGrade=this.value">'+
+    '<option value="used"'+(S.conditionGrade==='used'?' selected':'')+'>可以上 — Lowest Price</option>'+
+    '<option value="good"'+(S.conditionGrade==='good'?' selected':'')+'>良い以上 — Good+</option>'+
+    '<option value="vgood"'+(S.conditionGrade==='vgood'?' selected':'')+'>非常に良い以上 — Very Good+</option>'+
+    '</select></div>'+
+    '<p class="note">Amazon fee 16.5% auto-calculated</p>'+
+    '<hr class="div">'+
+    '<span class="sec-label">Acquisition Criteria</span>'+
+    '<div class="field"><label>最低利益額（¥以上）</label><input type="text" inputmode="numeric" value="'+t.minProfit+'" oninput="S.thresholds.minProfit=Number(this.value)||0"></div>'+
+    '<div class="field"><label>Sales Rank 上限</label><input type="text" inputmode="numeric" value="'+t.maxSalesRank+'" oninput="S.thresholds.maxSalesRank=Number(this.value)||0"></div>'+
+    '<div class="field"><label>出品者数 上限</label><input type="text" inputmode="numeric" value="'+t.maxSellers+'" oninput="S.thresholds.maxSellers=Number(this.value)||0"></div>'+
+    '<div class="field"><label>出品最低価格（¥以上）</label><input type="text" inputmode="numeric" value="'+t.minListPrice+'" oninput="S.thresholds.minListPrice=Number(this.value)||0"></div>'+
+    '<p class="note">Criteria changes trigger immediate re-evaluation</p>'+
+    '<button class="save-btn" onclick="saveSettings()">Save Configuration</button>'+
+    '<div class="saved" id="saved">— Saved —</div>';
 }
 
 function renderBooks(){
-  const el=document.getElementById('books');
+  var el=document.getElementById('books');
   if(!S.books.length){
-    el.innerHTML='<div class="empty"><div class="eicon">📚</div><div class="etext">本棚を撮影すると<br>リサーチ結果が表示されます</div></div>';
+    el.innerHTML='<div class="empty"><div class="eicon">◈</div><div class="etitle">Ready to Research</div><div class="etext">本棚を撮影してください<br>AIが書籍を認識し価値を判定します</div></div>';
     return;
   }
-  const{minProfit,maxSalesRank,maxSellers,minListPrice}=S.thresholds;
-  el.innerHTML=S.books.map(b=>{
-    const cls=b.status==='error'?'error':b.verdict==='buy'?'buy':b.verdict==='skip'?'skip':'loading';
-    const badge=b.status==='error'?'✕ 取得失敗':b.status==='loading'?'解析中':b.verdict==='buy'?'✓ 買い':'✕ スキップ';
-    const k=b.keepa;
-    const sp=k?getPrice(k):0;
-    const fee=k?Math.floor(sp*.165):0;
-    const profit=k?Math.floor(sp-b.buyPrice-S.shippingCost-fee):0;
-    const condLabel=S.conditionGrade==='vgood'?'非常に良い以上':S.conditionGrade==='good'?'良い以上':'可以上';
-    return`<div class="card ${cls}">
-      <button class="rbtn" onclick="removeBook(${b.id})">×</button>
-      <div class="badge">${badge}${b.status==='loading'?'<span class="pulse"> …</span>':''}${k?.isDemo?`<span class="demo">デモ</span>`:''}</div>
-      <div class="ctitle">${b.bookInfo?.title||'取得中...'}</div>
-      <div class="cauthor">${b.bookInfo?.author||''}</div>
-      ${k?`<div class="sgrid">
-        <div class="si"><div class="slb">参照価格（${condLabel}）</div><div class="sv ${sp>=minListPrice?'good':'bad'}">¥${sp.toLocaleString()}円</div></div>
-        <div class="si"><div class="slb">利益目安</div><div class="sv ${profit>=minProfit?'good':'bad'}">¥${profit.toLocaleString()}円</div></div>
-        <div class="si"><div class="slb">手数料(16.5%)</div><div class="sv neutral">¥${fee.toLocaleString()}円</div></div>
-        <div class="si"><div class="slb">Sales Rank</div><div class="sv ${k.salesRank<=maxSalesRank?'good':'bad'}">#${k.salesRank.toLocaleString()}</div></div>
-        <div class="si"><div class="slb">出品者数</div><div class="sv ${k.sellerCount<=maxSellers?'good':'bad'}">${k.sellerCount}人</div></div>
-        <div class="si full"><div class="slb">価格トレンド</div><div class="sv ${k.priceDropRisk?'bad':'good'}">${k.priceDropRisk?'⚠ 値下がり傾向':'✓ 安定'}</div></div>
-      </div>`:b.status==='loading'?'':`<div style="font-size:12px;color:var(--red);margin-top:4px">データ取得失敗</div>`}
-    </div>`;
+  var t=S.thresholds;
+  el.innerHTML=S.books.map(function(b){
+    var cls=b.status==='error'?'error':b.verdict==='buy'?'buy':b.verdict==='skip'?'skip':'loading';
+    var badge=b.status==='error'?'Error':b.status==='loading'?'Analyzing':b.verdict==='buy'?'Acquire':'Pass';
+    var k=b.keepa;
+    var sp=k?getPrice(k):0;
+    var fee=k?Math.floor(sp*.165):0;
+    var profit=k?Math.floor(sp-b.buyPrice-S.shippingCost-fee):0;
+    var cond=S.conditionGrade==='vgood'?'非常に良い+':S.conditionGrade==='good'?'良い+':'可以上';
+    var grid=k?
+      '<div class="sgrid">'+
+      '<div class="si"><div class="slb">参照価格 ('+cond+')</div><div class="sv '+(sp>=t.minListPrice?'g':'b')+'">¥'+sp.toLocaleString()+'</div></div>'+
+      '<div class="si"><div class="slb">利益目安</div><div class="sv '+(profit>=t.minProfit?'g':'b')+'">¥'+profit.toLocaleString()+'</div></div>'+
+      '<div class="si"><div class="slb">Amazon手数料</div><div class="sv n">¥'+fee.toLocaleString()+'</div></div>'+
+      '<div class="si"><div class="slb">Sales Rank</div><div class="sv '+(k.salesRank<=t.maxSalesRank?'g':'b')+'">#'+k.salesRank.toLocaleString()+'</div></div>'+
+      '<div class="si"><div class="slb">出品者数</div><div class="sv '+(k.sellerCount<=t.maxSellers?'g':'b')+'">'+k.sellerCount+'人</div></div>'+
+      '<div class="si full"><div class="slb">Price Trend</div><div class="sv '+(k.priceDropRisk?'b':'g')+'">'+(k.priceDropRisk?'⚠ Declining':'Stable')+'</div></div>'+
+      '</div>':
+      b.status==='loading'?'':'<div style="font-size:11px;color:var(--red);margin-top:6px;letter-spacing:.03em">Data unavailable</div>';
+    return '<div class="card '+cls+'">'+
+      '<button class="rbtn" onclick="removeBook('+b.id+')">✕</button>'+
+      '<div class="badge">'+badge+(b.status==='loading'?'<span class="pulse">  ·  ·  ·</span>':'')+(k&&k.isDemo?'<span class="demo">demo</span>':'')+'</div>'+
+      '<div class="ctitle">'+(b.bookInfo&&b.bookInfo.title||'—')+'</div>'+
+      '<div class="cauthor">'+(b.bookInfo&&b.bookInfo.author||'')+'</div>'+
+      grid+'</div>';
   }).join('');
 }
 
 function saveSettings(){
   persist();recheckAll();
-  const m=document.getElementById('savemsg');
-  if(m){m.style.display='';setTimeout(()=>{m.style.display='none';},2000);}
+  var m=document.getElementById('saved');
+  if(m){m.style.display='';setTimeout(function(){m.style.display='none';},2000);}
 }
 function toggleSettings(){S.showSettings=!S.showSettings;renderSettings();}
 function toggleLog(){S.showLog=!S.showLog;renderLog();}
 
-// Init
 renderHeader();renderSettings();renderLog();renderBooks();
 </script>
 </body>
