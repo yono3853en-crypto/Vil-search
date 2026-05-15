@@ -308,24 +308,28 @@ async function callGemini(base64) {
 
 async function extractBooks(file) {
   if (!state.geminiKey) throw new Error('Gemini APIキーが未設定です');
-  const { base64, width, height, canvas } = await resizeImage(file);
+  const { base64, width, height, canvas } = await resizeImage(file, 1536);
   log(`画像: ${width}x${height} / ${Math.round(base64.length * 0.75 / 1024)}KB`);
 
-  // 縦2分割（上段・下段）
-  log('縦2分割（上段・下段）');
+  // 横2分割して2倍に拡大→各本が大きく写り認識精度アップ
+  log('左右2分割・拡大認識');
+  const half = Math.ceil(width / 2);
   const allTiles = [];
   for (let i = 0; i < 2; i++) {
-    const sy = i * Math.ceil(height / 2);
-    const sh = Math.min(Math.ceil(height / 2), height - sy);
+    const sx = i * half;
+    const sw = Math.min(half, width - sx);
     const c = document.createElement('canvas');
-    c.width = width; c.height = sh;
-    c.getContext('2d').drawImage(canvas, 0, sy, width, sh, 0, 0, width, sh);
-    allTiles.push(c.toDataURL('image/jpeg', 0.85).split(',')[1]);
+    c.width = sw * 2; c.height = height * 2;
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(canvas, sx, 0, sw, height, 0, 0, sw * 2, height * 2);
+    allTiles.push(c.toDataURL('image/jpeg', 0.9).split(',')[1]);
   }
 
   const results = await Promise.all(allTiles.map((t, i) => {
-    log(`${i === 0 ? '上段' : '下段'}送信`);
-    return callGemini(t).catch(() => []);
+    log(`${i === 0 ? '左半分' : '右半分'}送信`);
+    return callGemini(t).catch(e => { log(`タイルエラー: ${e.message}`); return []; });
   }));
 
   const seen = new Set();
