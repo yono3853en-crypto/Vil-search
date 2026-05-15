@@ -296,29 +296,37 @@ async function fetchKeepa(isbn){
     return{currentPrice:cur,priceGood:Math.floor(cur*1.1),priceVGood:Math.floor(cur*1.2),salesRank:Math.floor(Math.random()*500000)+1000,sellerCount:Math.floor(Math.random()*10)+1,priceDropRisk:Math.random()>.6,isDemo:true};
   }
   if(!isbn) return null;
-  try{
-    log(`Keepa: ${isbn}`);
-    const r=await fetch(`https://api.keepa.com/product?key=${S.keepaKey}&domain=5&code=${isbn}&stats=1`);
-    const d=await r.json();
-    if(d.tokensLeft===0){log('Keepa: トークン不足');return null;}
-    const p=d.products?.[0];
-    if(!p){log('Keepa: 商品なし');return null;}
-    const gl=(idx)=>{const a=p.csv?.[idx]?.filter(v=>v>0)||[];return a.length?a.slice(-1)[0]/100:null;};
-    const cur=gl(1)||gl(0)||0;
-    const arr=p.csv?.[1]?.filter(v=>v>0)||[];
-    const avg=arr.slice(-20).reduce((a,b)=>a+b,0)/(arr.slice(-20).length||1);
-    log('Keepa: 成功');
-    return{
-      currentPrice:Math.floor(cur),
-      priceGood:gl(2)?Math.floor(gl(2)):null,
-      priceVGood:gl(3)?Math.floor(gl(3)):null,
-      salesRank:p.salesRanks?.['book']?.slice(-1)[0]||0,
-      sellerCount:p.stats?.buyBoxSellerCount?.[1]||0,
-      priceDropRisk:cur>0&&cur<avg/100*.85,
-      isDemo:false,
-    };
-  }catch(e){log(`Keepaエラー: ${e.message}`);return null;}
-}
+  for(let attempt=0;attempt<10;attempt++){
+    try{
+      log(`Keepa: ${isbn}${attempt>0?` (retry ${attempt})`:''}`);
+      const r=await fetch(`https://api.keepa.com/product?key=${S.keepaKey}&domain=5&code=${isbn}&stats=1`);
+      const d=await r.json();
+      if(d.tokensLeft===0){
+        const refillIn=d.refillIn||60000;
+        log(`トークン不足 → ${Math.ceil(refillIn/1000)}秒待機`);
+        await new Promise(r=>setTimeout(r,refillIn+500));
+        continue;
+      }
+      const p=d.products?.[0];
+      if(!p){log('Keepa: 商品なし');return null;}
+      const gl=(idx)=>{const a=p.csv?.[idx]?.filter(v=>v>0)||[];return a.length?a.slice(-1)[0]/100:null;};
+      const cur=gl(1)||gl(0)||0;
+      const arr=p.csv?.[1]?.filter(v=>v>0)||[];
+      const avg=arr.slice(-20).reduce((a,b)=>a+b,0)/(arr.slice(-20).length||1);
+      log('Keepa: 成功');
+      return{
+        currentPrice:Math.floor(cur),
+        priceGood:gl(2)?Math.floor(gl(2)):null,
+        priceVGood:gl(3)?Math.floor(gl(3)):null,
+        salesRank:p.salesRanks?.['book']?.slice(-1)[0]||0,
+        sellerCount:p.stats?.buyBoxSellerCount?.[1]||0,
+        priceDropRisk:cur>0&&cur<avg/100*.85,
+        isDemo:false,
+      };
+    }catch(e){log(`Keepaエラー: ${e.message}`);return null;}
+  }
+  log('Keepa: リトライ上限');
+  return null;
 
 // ===== PROCESSING =====
 let contMode=false;
