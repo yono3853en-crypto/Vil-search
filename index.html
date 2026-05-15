@@ -3,754 +3,495 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Veil Search</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="VeilSearch">
 <meta name="theme-color" content="#0f0f0f">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230f0f0f' rx='20'/><text y='.9em' font-size='80' x='10'>🔮</text></svg>">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<title>Veil Search</title>
 <style>
 :root {
-  --bg: #0f0f0f; --bg2: #1a1a1a; --bg3: #242424;
-  --border: #2e2e2e; --text: #f0f0f0; --text2: #888; --text3: #555;
-  --green: #4ade80; --green-bg: #0d2016; --green-border: #1a4a2a;
-  --red: #f87171; --red-bg: #200d0d; --red-border: #4a1a1a;
-  --accent: #6366f1; --accent2: #818cf8; --radius: 12px;
+  --bg:#0f0f0f;--bg2:#1a1a1a;--bg3:#242424;
+  --border:#2e2e2e;--text:#f0f0f0;--text2:#888;--text3:#555;
+  --green:#4ade80;--green-bg:#0d2016;--green-border:#1a4a2a;
+  --red:#f87171;--red-bg:#200d0d;--red-border:#4a1a1a;
+  --accent:#6366f1;--accent2:#818cf8;--r:12px;
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 16px; padding-bottom: 110px; }
-.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-.header-title { font-size: 18px; font-weight: 700; }
-.header-title span { color: var(--accent2); }
-.header-stats { font-size: 12px; color: var(--text2); margin-top: 2px; }
-.header-stats .buy { color: var(--green); font-weight: 500; }
-.header-stats .skip { color: var(--red); font-weight: 500; }
-.icon-btn { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; color: var(--text2); cursor: pointer; font-size: 13px; font-family: inherit; }
-.settings-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
-.section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent2); margin-bottom: 10px; }
-.field { margin-bottom: 10px; }
-.field:last-child { margin-bottom: 0; }
-.field label { font-size: 12px; color: var(--text2); display: block; margin-bottom: 5px; }
-.field input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; font-size: 14px; color: var(--text); font-family: inherit; }
-.field input:focus { outline: none; border-color: var(--accent); }
-.divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
-.threshold-note { font-size: 11px; color: var(--text3); margin-top: 8px; }
-.progress-banner { background: var(--bg2); border: 1px solid var(--accent); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; }
-.progress-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; }
-.spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent2); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.progress-bar-wrap { background: var(--bg3); border-radius: 99px; height: 4px; overflow: hidden; }
-.progress-bar { height: 4px; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.4s ease; }
-.card { border-radius: var(--radius); padding: 14px; margin-bottom: 10px; position: relative; border: 1px solid; animation: fadeIn 0.2s ease; }
-@keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
-.card.buy { background: var(--green-bg); border-color: var(--green-border); }
-.card.skip { background: var(--red-bg); border-color: var(--red-border); }
-.card.loading { background: var(--bg2); border-color: var(--border); }
-.card.error { background: var(--bg2); border-color: var(--red-border); }
-.card-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; margin-bottom: 8px; }
-.card.buy .card-badge { background: #14532d; color: var(--green); }
-.card.skip .card-badge { background: #450a0a; color: var(--red); }
-.card.loading .card-badge { background: var(--bg3); color: var(--text2); }
-.card.error .card-badge { background: #450a0a; color: var(--red); }
-.card-title { font-size: 15px; font-weight: 700; padding-right: 28px; line-height: 1.4; margin-bottom: 3px; }
-.card-author { font-size: 12px; color: var(--text2); margin-bottom: 10px; }
-.card-demo { font-size: 10px; color: var(--text3); margin-left: 6px; font-weight: 400; }
-.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.stat-item { background: rgba(0,0,0,0.2); border-radius: 8px; padding: 7px 10px; }
-.stat-item.full { grid-column: span 2; }
-.stat-label { font-size: 10px; color: var(--text3); margin-bottom: 2px; }
-.stat-value { font-size: 13px; font-weight: 700; }
-.stat-value.good { color: var(--green); }
-.stat-value.bad { color: var(--red); }
-.remove-btn { position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--text3); font-size: 18px; cursor: pointer; padding: 4px; line-height: 1; }
-.loading-pulse { display: inline-block; animation: pulse 1s ease-in-out infinite; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-.empty-state { text-align: center; padding: 48px 0; color: var(--text3); }
-.empty-icon { font-size: 48px; margin-bottom: 12px; }
-.empty-text { font-size: 14px; line-height: 1.8; }
-.log-box { background: #050505; border: 1px solid var(--border); color: #00ff88; font-size: 10px; font-family: monospace; padding: 10px; border-radius: 8px; margin-bottom: 12px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
-.bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(15,15,15,0.96); backdrop-filter: blur(12px); border-top: 1px solid var(--border); padding: 12px 16px; }
-.scan-btn { width: 100%; padding: 15px; background: linear-gradient(135deg, #1e1b4b, #312e81); border: 1px solid #4338ca; border-radius: var(--radius); color: #c7d2fe; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; }
-.scan-btn:active { opacity: 0.8; }
-.scan-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.warn-banner { background: #1c1204; border: 1px solid #5a3e0a; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #fbbf24; margin-bottom: 14px; }
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:16px;padding-bottom:110px;}
+button{cursor:pointer;font-family:inherit;}
+input,select{font-family:inherit;}
+
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+.title{font-size:18px;font-weight:700;}
+.title span{color:var(--accent2);}
+.stats{font-size:12px;color:var(--text2);margin-top:2px;}
+.stats .buy{color:var(--green);font-weight:500;}
+.stats .skip{color:var(--red);font-weight:500;}
+.hbtns{display:flex;gap:8px;}
+.ibtn{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text2);font-size:13px;}
+
+.settings{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:16px;}
+.slabel{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent2);margin-bottom:10px;}
+.field{margin-bottom:10px;}
+.field:last-of-type{margin-bottom:0;}
+.field label{font-size:12px;color:var(--text2);display:block;margin-bottom:5px;}
+.field input,.field select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;color:var(--text);}
+.field input:focus,.field select:focus{outline:none;border-color:var(--accent);}
+.divider{border:none;border-top:1px solid var(--border);margin:14px 0;}
+.tnote{font-size:11px;color:var(--text3);margin-top:8px;}
+.savebtn{width:100%;margin-top:14px;padding:12px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:700;}
+.savemsg{display:none;text-align:center;font-size:12px;color:var(--green);margin-top:8px;}
+
+.progress{background:var(--bg2);border:1px solid var(--accent);border-radius:8px;padding:12px 14px;margin-bottom:14px;}
+.ptop{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px;}
+.spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.pbar-wrap{background:var(--bg3);border-radius:99px;height:4px;overflow:hidden;}
+.pbar{height:4px;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s;}
+
+.warn{background:#1c1204;border:1px solid #5a3e0a;border-radius:8px;padding:10px 14px;font-size:12px;color:#fbbf24;margin-bottom:14px;}
+
+.card{border-radius:var(--r);padding:14px;margin-bottom:10px;position:relative;border:1px solid;animation:fadeIn .2s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.card.buy{background:var(--green-bg);border-color:var(--green-border);}
+.card.skip{background:var(--red-bg);border-color:var(--red-border);}
+.card.loading{background:var(--bg2);border-color:var(--border);}
+.card.error{background:var(--bg2);border-color:var(--red-border);}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;margin-bottom:8px;}
+.card.buy .badge{background:#14532d;color:var(--green);}
+.card.skip .badge{background:#450a0a;color:var(--red);}
+.card.loading .badge{background:var(--bg3);color:var(--text2);}
+.card.error .badge{background:#450a0a;color:var(--red);}
+.ctitle{font-size:15px;font-weight:700;padding-right:28px;line-height:1.4;margin-bottom:3px;}
+.cauthor{font-size:12px;color:var(--text2);margin-bottom:10px;}
+.demo{font-size:10px;color:var(--text3);margin-left:6px;font-weight:400;}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.si{background:rgba(0,0,0,.2);border-radius:8px;padding:7px 10px;}
+.si.full{grid-column:span 2;}
+.slb{font-size:10px;color:var(--text3);margin-bottom:2px;}
+.sv{font-size:13px;font-weight:700;}
+.sv.good{color:var(--green);}
+.sv.bad{color:var(--red);}
+.sv.neutral{color:var(--text);}
+.rbtn{position:absolute;top:10px;right:10px;background:none;border:none;color:var(--text3);font-size:18px;padding:4px;line-height:1;}
+.pulse{display:inline-block;animation:pulse 1s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.empty{text-align:center;padding:48px 0;color:var(--text3);}
+.eicon{font-size:48px;margin-bottom:12px;}
+.etext{font-size:14px;line-height:1.8;}
+
+.logbox{background:#050505;border:1px solid var(--border);color:#00ff88;font-size:10px;font-family:monospace;padding:10px;border-radius:8px;margin-bottom:12px;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;}
+
+.bottombar{position:fixed;bottom:0;left:0;right:0;background:rgba(15,15,15,.96);backdrop-filter:blur(12px);border-top:1px solid var(--border);padding:12px 16px;}
+.btns{display:flex;gap:8px;}
+.scanbtn{flex:1;padding:15px;background:linear-gradient(135deg,#1e1b4b,#312e81);border:1px solid #4338ca;border-radius:var(--r);color:#c7d2fe;font-size:15px;font-weight:700;}
+.stopbtn{padding:15px 18px;background:#450a0a;border:1px solid var(--red-border);border-radius:var(--r);color:var(--red);font-size:14px;font-weight:700;}
 </style>
 </head>
 <body>
+
 <div class="header">
   <div>
-    <div class="header-title">🔮 Veil<span>Search</span></div>
-    <div class="header-stats" id="header-stats"></div>
+    <div class="title">Veil<span>Search</span></div>
+    <div class="stats" id="stats"></div>
   </div>
-  <div style="display:flex;gap:8px">
-    <button class="icon-btn" onclick="resetAll()" title="リセット">🗑️</button>
-    <button class="icon-btn" onclick="toggleLog()">🔍</button>
-    <button class="icon-btn" onclick="toggleSettings()">⚙️ 設定</button>
-  </div>
-</div>
-<div id="warn-banner" style="display:none" class="warn-banner"></div>
-<div id="progress-banner" style="display:none"></div>
-<div id="settings-panel" style="display:none"></div>
-<div id="log-box" style="display:none"></div>
-<div id="books-list"></div>
-<div class="bottom-bar">
-  <div style="display:flex;gap:8px">
-    <button class="scan-btn" id="scan-btn" onclick="startContinuous()" style="flex:1">
-      📷 撮影開始
-    </button>
-    <button id="stop-btn" onclick="stopContinuous()" style="display:none;padding:15px 18px;background:#450a0a;border:1px solid var(--red-border);border-radius:var(--radius);color:var(--red);font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;">
-      ■ 終了
-    </button>
+  <div class="hbtns">
+    <button class="ibtn" onclick="resetAll()">🗑️</button>
+    <button class="ibtn" onclick="toggleLog()">🔍</button>
+    <button class="ibtn" onclick="toggleSettings()">⚙️ 設定</button>
   </div>
 </div>
-<input type="file" id="file-input" accept="image/*" capture="environment" style="display:none" onchange="handleContinuous(this)">
+
+<div id="warn" style="display:none" class="warn"></div>
+<div id="progress" style="display:none"></div>
+<div id="settings" style="display:none"></div>
+<div id="logbox" style="display:none"></div>
+<div id="books"></div>
+
+<div class="bottombar">
+  <div class="btns">
+    <button class="scanbtn" id="scanbtn" onclick="startScan()">📷 Research</button>
+    <button class="stopbtn" id="stopbtn" style="display:none" onclick="stopScan()">■ 終了</button>
+  </div>
+</div>
+<input type="file" id="fileinput" accept="image/*" capture="environment" style="display:none" onchange="onFile(this)">
 
 <script>
-// ── バージョン: 2.0 ──────────────────────────────
-const VERSION = '2.0';
-
-// ── State ─────────────────────────────────────────
-let state = {
-  geminiKey: '',
-  keepaKey: '',
-  buyPrice: 100,
-  shippingCost: 500,       // 送料（手入力）
-  conditionGrade: 'used',  // 'used'=可以上 'good'=良い以上 'vgood'=非常に良い以上
-  thresholds: { minProfit: 300, maxSalesRank: 300000, maxSellers: 5, minListPrice: 500 },
-  books: [],
-  showSettings: false,
-  showLog: false,
-  logs: [],
-  counter: 0,
-  processing: false,
+// ===== STATE =====
+const S = {
+  geminiKey:'', keepaKey:'',
+  buyPrice:100, shippingCost:500, conditionGrade:'used',
+  thresholds:{minProfit:300,maxSalesRank:300000,maxSellers:5,minListPrice:500},
+  books:[], showSettings:false, showLog:false,
+  logs:[], counter:0, scanning:false,
 };
 
-try {
-  const s = JSON.parse(localStorage.getItem('veilsearch_v2') || '{}');
-  if (s.geminiKey) state.geminiKey = s.geminiKey;
-  if (s.keepaKey) state.keepaKey = s.keepaKey;
-  if (s.buyPrice != null) state.buyPrice = s.buyPrice;
-  if (s.shippingCost != null) state.shippingCost = s.shippingCost;
-  if (s.conditionGrade) state.conditionGrade = s.conditionGrade;
-  if (s.thresholds) state.thresholds = { ...state.thresholds, ...s.thresholds };
-} catch(e) {}
-
-function save() {
+(function(){
   try {
-    localStorage.setItem('veilsearch_v2', JSON.stringify({
-      geminiKey: state.geminiKey,
-      keepaKey: state.keepaKey,
-      buyPrice: state.buyPrice,
-      shippingCost: state.shippingCost,
-      conditionGrade: state.conditionGrade,
-      thresholds: state.thresholds,
-    }));
-  } catch(e) {}
+    const s = JSON.parse(localStorage.getItem('vs3')||'{}');
+    if(s.geminiKey) S.geminiKey=s.geminiKey;
+    if(s.keepaKey) S.keepaKey=s.keepaKey;
+    if(s.buyPrice!=null) S.buyPrice=s.buyPrice;
+    if(s.shippingCost!=null) S.shippingCost=s.shippingCost;
+    if(s.conditionGrade) S.conditionGrade=s.conditionGrade;
+    if(s.thresholds) S.thresholds={...S.thresholds,...s.thresholds};
+  } catch(e){}
+})();
+
+function persist(){
+  try{localStorage.setItem('vs3',JSON.stringify({
+    geminiKey:S.geminiKey,keepaKey:S.keepaKey,
+    buyPrice:S.buyPrice,shippingCost:S.shippingCost,
+    conditionGrade:S.conditionGrade,thresholds:S.thresholds
+  }));}catch(e){}
 }
 
-// ── Log ───────────────────────────────────────────
-function log(msg) {
-  const t = new Date().toLocaleTimeString('ja-JP');
-  state.logs.unshift(`[${t}] ${msg}`);
-  if (state.logs.length > 200) state.logs.pop();
-  if (state.showLog) renderLog();
+// ===== LOG =====
+function log(m){
+  const t=new Date().toLocaleTimeString('ja-JP');
+  S.logs.unshift(`[${t}] ${m}`);
+  if(S.logs.length>200) S.logs.pop();
+  if(S.showLog) renderLog();
 }
 
-// コンディション別の価格を取得
-function getConditionPrice(k) {
-  switch (state.conditionGrade) {
-    case 'good':  return k.priceGood  ?? k.currentPrice;
-    case 'vgood': return k.priceVGood ?? k.currentPrice;
-    default:      return k.currentPrice; // 可以上（最安値）
-  }
+// ===== CLASSIFY =====
+function getPrice(k){
+  if(S.conditionGrade==='vgood') return k.priceVGood??k.currentPrice;
+  if(S.conditionGrade==='good') return k.priceGood??k.currentPrice;
+  return k.currentPrice;
+}
+function classify(k,bp){
+  const {minProfit,maxSalesRank,maxSellers,minListPrice}=S.thresholds;
+  const sp=getPrice(k);
+  const fee=Math.floor(sp*0.165);
+  const profit=Math.floor(sp-bp-S.shippingCost-fee);
+  return(profit>=minProfit&&k.salesRank<=maxSalesRank&&k.sellerCount<=maxSellers&&sp>=minListPrice&&!k.priceDropRisk)?'buy':'skip';
 }
 
-// ── Classify ──────────────────────────────────────
-function classify(k, bp) {
-  const { minProfit, maxSalesRank, maxSellers, minListPrice } = state.thresholds;
-  const sellPrice = getConditionPrice(k);
-  const amazonFee = Math.floor(sellPrice * 0.165);
-  const profit = Math.floor(sellPrice - bp - state.shippingCost - amazonFee);
-  return (profit >= minProfit && k.salesRank <= maxSalesRank && k.sellerCount <= maxSellers && sellPrice >= minListPrice && !k.priceDropRisk)
-    ? 'buy' : 'skip';
-}
-
-// ── Image resize ──────────────────────────────────
-function resizeImage(file, maxPx = 1536) {
-  return new Promise((res, rej) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      let w = img.width, h = img.height;
-      if (w > maxPx || h > maxPx) {
-        if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
-        else { w = Math.round(w * maxPx / h); h = maxPx; }
+// ===== IMAGE =====
+function resizeImg(file,maxPx=1536){
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      let w=img.width,h=img.height;
+      if(w>maxPx||h>maxPx){
+        if(w>h){h=Math.round(h*maxPx/w);w=maxPx;}
+        else{w=Math.round(w*maxPx/h);h=maxPx;}
       }
-      const c = document.createElement('canvas');
-      c.width = w; c.height = h;
-      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      const c=document.createElement('canvas');
+      c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
       URL.revokeObjectURL(url);
-      res({ base64: c.toDataURL('image/jpeg', 0.85).split(',')[1], width: w, height: h, canvas: c });
+      res({b64:c.toDataURL('image/jpeg',.85).split(',')[1],w,h,canvas:c});
     };
-    img.onerror = rej;
-    img.src = url;
+    img.onerror=rej;
+    img.src=url;
   });
 }
 
-function splitCanvas(canvas, width, height, n = 2) {
-  const tw = Math.ceil(width / n);
-  return Array.from({ length: n }, (_, i) => {
-    const sx = i * tw, sw = Math.min(tw, width - sx);
-    const c = document.createElement('canvas');
-    c.width = sw; c.height = height;
-    c.getContext('2d').drawImage(canvas, sx, 0, sw, height, 0, 0, sw, height);
-    return c.toDataURL('image/jpeg', 0.85).split(',')[1];
-  });
+// ===== GEMINI =====
+async function callGemini(b64,prompt,maxTokens=2000){
+  const r=await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${S.geminiKey}`,
+    {method:'POST',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({
+       system_instruction:{parts:[{text:'JSONのみ返すAPIです。マークダウン不要。'}]},
+       contents:[{parts:[
+         {inline_data:{mime_type:'image/jpeg',data:b64}},
+         {text:prompt}
+       ]}],
+       generationConfig:{maxOutputTokens:maxTokens,temperature:1,thinkingConfig:{thinkingBudget:0}}
+     })
+    }
+  );
+  if(!r.ok){
+    const e=await r.text();
+    let msg='';try{msg=JSON.parse(e)?.error?.message||'';}catch{}
+    throw new Error(`Gemini ${r.status}: ${msg||e.slice(0,80)}`);
+  }
+  const d=await r.json();
+  return d.candidates?.[0]?.content?.parts?.[0]?.text||'';
 }
 
-// ── Gemini ────────────────────────────────────────
-function parseGeminiJSON(text) {
-  // バッククォートを含む全てのmarkdown記法を除去
-  let t = text;
-  // 正規表現で ```json...``` や ```...``` ブロックを除去
-  t = t.replace(/```[a-zA-Z]*\n?/g, '').replace(/\n?```/g, '');
-  t = t.trim();
-  // [ から ] を抽出
-  const start = t.indexOf('[');
-  const end = t.lastIndexOf(']');
-  if (start !== -1 && end > start) {
-    const jsonStr = t.slice(start, end + 1);
-    try { return JSON.parse(jsonStr); } catch(e) {
-      log(`パースエラー: ${e.message.slice(0,50)}`);
-    }
-  }
-  // 個別オブジェクトを抽出
-  const items = [];
-  let depth = 0, startIdx = -1;
-  for (let i = 0; i < t.length; i++) {
-    if (t[i] === '{') { if (depth === 0) startIdx = i; depth++; }
-    else if (t[i] === '}') {
-      depth--;
-      if (depth === 0 && startIdx !== -1) {
-        try { items.push(JSON.parse(t.slice(startIdx, i + 1))); } catch {}
-      }
-    }
-  }
-  return items.length ? items : null;
+function parseJSON(text){
+  let t=text.replace(/```json/gi,'').replace(/```/g,'').trim();
+  const s=t.indexOf('['),e=t.lastIndexOf(']');
+  if(s!==-1&&e>s){try{return JSON.parse(t.slice(s,e+1));}catch{}}
+  const s2=t.indexOf('{'),e2=t.lastIndexOf('}');
+  if(s2!==-1&&e2>s2){try{return[JSON.parse(t.slice(s2,e2+1))];}catch{}}
+  return null;
 }
 
-async function callGemini(base64) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.geminiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: {
-          parts: [{ text: 'あなたはJSONのみを返すAPIです。マークダウン、コードブロック、説明文は一切使いません。必ず生のJSONのみを返します。' }]
-        },
-        contents: [{
-          parts: [
-            { inline_data: { mime_type: 'image/jpeg', data: base64 } },
-            { text: `この本棚の画像に写っている本の背表紙を読んでください。
+async function extractBooks(file){
+  const {b64,w,h,canvas}=await resizeImg(file);
+  log(`画像: ${w}x${h}`);
 
+  // 左右2分割・2倍拡大
+  const tiles=[];
+  const half=Math.ceil(w/2);
+  for(let i=0;i<2;i++){
+    const sx=i*half,sw=Math.min(half,w-sx);
+    const c=document.createElement('canvas');
+    c.width=sw*2;c.height=h*2;
+    const ctx=c.getContext('2d');
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality='high';
+    ctx.drawImage(canvas,sx,0,sw,h,0,0,sw*2,h*2);
+    tiles.push(c.toDataURL('image/jpeg',.9).split(',')[1]);
+  }
+
+  const prompt=`この本棚の背表紙を読んでください。
 絶対に守るルール：
-- 画像に実際に写っている本だけを報告する
-- 見えない本・想像した本・存在するかもしれない本は絶対に含めない
-- 背表紙に見える文字をそのまま書く（推測・補完・創作禁止）
-- 文字が途中までしか見えない場合は見えた部分だけ書く
-- 著者名は確実に読める場合だけ書く
-- ISBNバーコードの数字が見えれば13桁で書く
-- 帯（本に巻かれた細い紙）は無視する。帯の文字は報告しない
-- 1冊の本から1つのタイトルだけ報告する
+- 実際に写っている本だけ報告する
+- 見えた文字をそのまま書く（推測・補完・創作禁止）
+- 帯は無視する
+- 1冊から1タイトルのみ
 
-[{"title":"見えた文字のみ","author":"著者名またはnull","isbn":"13桁またはnull"}]` }
-          ]
-        }],
-        generationConfig: { 
-          maxOutputTokens: 8192, 
-          temperature: 1,
-          thinkingConfig: { thinkingBudget: 0 }
-        }
-      })
-    }
-  );
-  if (!res.ok) {
-    const err = await res.text();
-    let msg = '';
-    try { msg = JSON.parse(err)?.error?.message || ''; } catch {}
-    log(`Geminiエラー ${res.status}: ${msg || err.slice(0, 100)}`);
-    throw new Error(`Gemini ${res.status}: ${msg || err.slice(0, 80)}`);
-  }
-  const d = await res.json();
-  const raw = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  log(`Gemini返答(${raw.length}文字): ${raw.slice(0, 80)}`);
+[{"title":"タイトル","author":"著者またはnull"}]`;
 
-  // ```json や ``` を完全除去
-  let cleaned = raw
-    .replace(/```json/gi, '')
-    .replace(/```/g, '')
-    .trim();
+  const results=await Promise.all(tiles.map(async(t,i)=>{
+    log(`タイル${i+1}/2 送信`);
+    try{
+      const raw=await callGemini(t,prompt,4096);
+      log(`タイル${i+1}返答(${raw.length}文字)`);
+      return parseJSON(raw)||[];
+    }catch(e){log(`タイル${i+1}エラー: ${e.message}`);return[];}
+  }));
 
-  const s = cleaned.indexOf('[');
-  const e = cleaned.lastIndexOf(']');
-  log(`パース: s=${s} e=${e} len=${cleaned.length}`);
-  if (s === -1 || e <= s) { log('配列なし'); return []; }
-  try {
-    return JSON.parse(cleaned.slice(s, e + 1));
-  } catch(err) {
-    log(`パース失敗: ${err.message.slice(0,40)}`);
-    return [];
-  }
-}
-
-// ── Gemini: detect book positions ────────────────
-async function detectBookPositions(base64, width, height) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.geminiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: 'JSONのみを返すAPIです。マークダウン不要。' }] },
-        contents: [{
-          parts: [
-            { inline_data: { mime_type: 'image/jpeg', data: base64 } },
-            { text: `この画像に写っている本棚の各本の背表紙の左端と右端のX座標（ピクセル）を返してください。
-画像の幅は${width}px、高さは${height}pxです。
-左から順に各本の位置を配列で返してください。
-[{"x1":0,"x2":80},{"x1":80,"x2":160},...] のような形式で。
-背表紙が見えない本は除外してください。` }
-          ]
-        }],
-        generationConfig: { maxOutputTokens: 2000, temperature: 0 }
-      })
-    }
-  );
-  if (!res.ok) return null;
-  const d = await res.json();
-  const raw = d.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-  const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
-  const s = cleaned.indexOf('['), e = cleaned.lastIndexOf(']');
-  if (s === -1 || e <= s) return null;
-  try { return JSON.parse(cleaned.slice(s, e + 1)); } catch { return null; }
-}
-
-async function extractBooks(file) {
-  if (!state.geminiKey) throw new Error('Gemini APIキーが未設定です');
-  const { base64, width, height, canvas } = await resizeImage(file, 1536);
-  log(`画像: ${width}x${height} / ${Math.round(base64.length * 0.75 / 1024)}KB`);
-
-  // Step1: 本の位置を検出
-  log('Step1: 本の位置を検出中...');
-  const positions = await detectBookPositions(base64, width, height);
-
-  if (positions && positions.length > 0) {
-    log(`${positions.length}冊の位置を検出`);
-
-    // Step2: 各本を切り出して拡大、個別に認識
-    const bookPromises = positions.map(async (pos, i) => {
-      const x1 = Math.max(0, Math.floor(pos.x1));
-      const x2 = Math.min(width, Math.floor(pos.x2));
-      const bw = x2 - x1;
-      if (bw < 5) return null;
-
-      // 4倍に拡大して切り出し
-      const scale = Math.min(4, 400 / bw);
-      const c = document.createElement('canvas');
-      c.width = Math.floor(bw * scale);
-      c.height = Math.floor(height * scale);
-      const ctx = c.getContext('2d');
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(canvas, x1, 0, bw, height, 0, 0, c.width, c.height);
-      const tileBase64 = c.toDataURL('image/jpeg', 0.95).split(',')[1];
-
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.geminiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: 'JSONのみを返すAPIです。マークダウン不要。' }] },
-            contents: [{
-              parts: [
-                { inline_data: { mime_type: 'image/jpeg', data: tileBase64 } },
-                { text: `この本1冊の背表紙を読んでください。
-見えた文字をそのまま正確に書いてください。推測・補完・創作禁止。
-著者名が読める場合だけ書く。
-
-{"title":"タイトル","author":"著者またはnull","isbn":null}` }
-              ]
-            }],
-            generationConfig: { maxOutputTokens: 200, temperature: 0 }
-          })
-        }
-      );
-      if (!res.ok) return null;
-      const d = await res.json();
-      const raw = d.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-      const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
-      const s = cleaned.indexOf('{'), e = cleaned.lastIndexOf('}');
-      if (s === -1 || e <= s) return null;
-      try {
-        const book = JSON.parse(cleaned.slice(s, e + 1));
-        if (book.title && book.title.length > 3) {
-          log(`本${i+1}: ${book.title.slice(0, 20)}`);
-          return book;
-        }
-      } catch {}
-      return null;
-    });
-
-    // 並列処理（5冊ずつバッチ処理してレート制限を回避）
-    const results = [];
-    const batchSize = 5;
-    for (let i = 0; i < bookPromises.length; i += batchSize) {
-      const batch = await Promise.all(bookPromises.slice(i, i + batchSize));
-      results.push(...batch);
-      if (i + batchSize < bookPromises.length) {
-        await new Promise(r => setTimeout(r, 500));
-      }
-    }
-
-    const books = results.filter(b => b !== null);
-    log(`認識: ${books.length}冊`);
-    return books;
-  }
-
-  // フォールバック: 左右2分割
-  log('位置検出失敗→左右2分割フォールバック');
-  const half = Math.ceil(width / 2);
-  const tiles = [];
-  for (let i = 0; i < 2; i++) {
-    const sx = i * half;
-    const sw = Math.min(half, width - sx);
-    const c = document.createElement('canvas');
-    c.width = sw * 2; c.height = height * 2;
-    const ctx = c.getContext('2d');
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(canvas, sx, 0, sw, height, 0, 0, sw * 2, height * 2);
-    tiles.push(c.toDataURL('image/jpeg', 0.9).split(',')[1]);
-  }
-  const results2 = await Promise.all(tiles.map(t => callGemini(t).catch(() => [])));
-  const seen = new Set();
-  const books = results2.flat().filter(b => {
-    if (!b.title || b.title.trim().length <= 4) return false;
-    const k = b.title.trim().slice(0, 15);
-    if (seen.has(k)) return false;
-    seen.add(k); return true;
+  const seen=new Set();
+  const books=results.flat().filter(b=>{
+    if(!b.title||b.title.trim().length<=4) return false;
+    const k=b.title.trim().slice(0,15);
+    if(seen.has(k)) return false;
+    seen.add(k);return true;
   });
   log(`認識: ${books.length}冊`);
   return books;
 }
 
-// ── Title cleanup ─────────────────────────────
-function cleanTitle(title) {
-  if (!title) return title;
-  // 文庫番号パターンを除去（例：み 48-1、み48-1、あ 12-3 路生よる など）
-  let t = title
-    .replace(/^[ぁ-ん一-龯]\s*\d+-\d+\s*/g, '')  // 先頭の文庫番号
-    .replace(/^[a-zA-Z]\s*\d+-\d+\s*/g, '')        // 英字の文庫番号
-    .replace(/\s+[\u3041-\u3096\u30A1-\u30F6]{1,6}(よる|著|編|作|文|訳)\s*/g, ' ') // 著者名パターン
-    .replace(/[のをがはにとでやなまへも]$/, '')     // 末尾の助詞
-    .trim();
-  // 3文字以下は元のタイトルを使用
-  return t.length > 3 ? t : title;
-}
-
-// ── ISBN lookup (CiNii) ───────────────────────────
-async function lookupIsbn(title, author) {
-  const cleaned = cleanTitle(title);
-  log(`ISBN検索: ${cleaned.slice(0, 25)}`);
-  try {
-    const q = encodeURIComponent(cleaned);
-    const r = await fetch(`https://cir.nii.ac.jp/opensearch/books?title=${q}&format=json&count=1`);
-    const d = await r.json();
-    const item = d.items?.[0];
-    if (!item) { log(`ISBN見つからず: ${cleaned.slice(0,20)}`); return null; }
-    const isbnObj = item['dc:identifier']?.find(i => i['@type'] === 'cir:ISBN');
-    const isbn = isbnObj?.['@value'];
-    if (isbn) { log(`CiNii: ${isbn}`); return isbn; }
-  } catch(e) { log(`CiNiiエラー: ${e.message}`); }
-  log(`ISBN見つからず: ${cleaned.slice(0, 20)}`);
+// ===== ISBN (CiNii) =====
+async function lookupIsbn(title,author){
+  const t=title.replace(/^[ぁ-ん一-龯]\s*\d+-\d+\s*/g,'').replace(/[のをがはにとでやなまへも]$/,'').trim()||title;
+  log(`ISBN検索: ${t.slice(0,25)}`);
+  try{
+    const r=await fetch(`https://cir.nii.ac.jp/opensearch/books?title=${encodeURIComponent(t)}&format=json&count=1`);
+    const d=await r.json();
+    const item=d.items?.[0];
+    if(!item){log(`ISBN見つからず: ${t.slice(0,20)}`);return null;}
+    const ids=item['dc:identifier'];
+    const obj=Array.isArray(ids)?ids.find(i=>i['@type']==='cir:ISBN'):null;
+    if(obj?.['@value']){log(`CiNii: ${obj['@value']}`);return obj['@value'];}
+  }catch(e){log(`CiNiiエラー: ${e.message}`);}
+  log(`ISBN見つからず: ${t.slice(0,20)}`);
   return null;
 }
 
-// ── Keepa ─────────────────────────────────────────
-async function fetchKeepa(isbn) {
-  if (!state.keepaKey) {
-    await new Promise(r => setTimeout(r, 150));
-    const cur = Math.floor(Math.random()*3000)+500;
-    return { currentPrice: cur, priceGood: Math.floor(cur*1.1), priceVGood: Math.floor(cur*1.2), salesRank: Math.floor(Math.random()*500000)+1000, sellerCount: Math.floor(Math.random()*10)+1, priceDropRisk: Math.random()>0.6, isDemo: true };
+// ===== KEEPA =====
+async function fetchKeepa(isbn){
+  if(!S.keepaKey){
+    await new Promise(r=>setTimeout(r,100));
+    const cur=Math.floor(Math.random()*3000)+500;
+    return{currentPrice:cur,priceGood:Math.floor(cur*1.1),priceVGood:Math.floor(cur*1.2),salesRank:Math.floor(Math.random()*500000)+1000,sellerCount:Math.floor(Math.random()*10)+1,priceDropRisk:Math.random()>.6,isDemo:true};
   }
-  if (!isbn) return null;
-  try {
+  if(!isbn) return null;
+  try{
     log(`Keepa: ${isbn}`);
-    const r = await fetch(`https://api.keepa.com/product?key=${state.keepaKey}&domain=5&code=${isbn}&stats=1`);
-    const d = await r.json();
-    if (d.tokensLeft === 0) { log('Keepa: トークン不足'); return null; }
-    const p = d.products?.[0];
-    if (!p) { log('Keepa: 商品なし'); return null; }
-    const getLatest = (csvIdx) => {
-      const arr = p.csv?.[csvIdx]?.filter(v => v > 0) || [];
-      return arr.length ? arr.slice(-1)[0] / 100 : null;
-    };
-    const cur = getLatest(1) || getLatest(0) || 0;
-    const prices = p.csv?.[1]?.filter(v => v > 0) || [];
-    const recent = prices.slice(-20);
-    const avg = recent.reduce((a, b) => a + b, 0) / (recent.length || 1);
+    const r=await fetch(`https://api.keepa.com/product?key=${S.keepaKey}&domain=5&code=${isbn}&stats=1`);
+    const d=await r.json();
+    if(d.tokensLeft===0){log('Keepa: トークン不足');return null;}
+    const p=d.products?.[0];
+    if(!p){log('Keepa: 商品なし');return null;}
+    const gl=(idx)=>{const a=p.csv?.[idx]?.filter(v=>v>0)||[];return a.length?a.slice(-1)[0]/100:null;};
+    const cur=gl(1)||gl(0)||0;
+    const arr=p.csv?.[1]?.filter(v=>v>0)||[];
+    const avg=arr.slice(-20).reduce((a,b)=>a+b,0)/(arr.slice(-20).length||1);
     log('Keepa: 成功');
-    return {
-      currentPrice: Math.floor(cur),
-      priceGood: getLatest(2) ? Math.floor(getLatest(2)) : null,
-      priceVGood: getLatest(3) ? Math.floor(getLatest(3)) : null,
-      salesRank: p.salesRanks?.['book']?.slice(-1)[0] || 0,
-      sellerCount: p.stats?.buyBoxSellerCount?.[1] || 0,
-      priceDropRisk: cur > 0 && cur < avg/100 * 0.85,
-      isDemo: false,
+    return{
+      currentPrice:Math.floor(cur),
+      priceGood:gl(2)?Math.floor(gl(2)):null,
+      priceVGood:gl(3)?Math.floor(gl(3)):null,
+      salesRank:p.salesRanks?.['book']?.slice(-1)[0]||0,
+      sellerCount:p.stats?.buyBoxSellerCount?.[1]||0,
+      priceDropRisk:cur>0&&cur<avg/100*.85,
+      isDemo:false,
     };
-  } catch(e) { log(`Keepaエラー: ${e.message}`); return null; }
-}
-    const r = await fetch(url);
-    const d = await r.json();
-    const p = d.products?.[0];
-    if (!p) { log('Keepa: 商品なし'); return null; }
-    // csv[0]=新品, csv[1]=中古可, csv[2]=中古良い, csv[3]=中古非常に良い
-    const getLatest = (csvIdx) => {
-      const arr = p.csv?.[csvIdx]?.filter(v => v > 0) || [];
-      return arr.length ? arr.slice(-1)[0] / 100 : null;
-    };
-    const cur = getLatest(1) || getLatest(0) || 0; // 中古可以上
-    const curGood  = getLatest(2); // 中古良い以上
-    const curVGood = getLatest(3); // 中古非常に良い以上
-    const prices = p.csv?.[1]?.filter(v => v > 0) || [];
-    const recent = prices.slice(-20);
-    const avg = recent.reduce((a, b) => a + b, 0) / (recent.length || 1);
-    log('Keepa: 成功');
-    return {
-      currentPrice: Math.floor(cur),
-      priceGood:    curGood  ? Math.floor(curGood)  : null,
-      priceVGood:   curVGood ? Math.floor(curVGood) : null,
-      salesRank: p.salesRanks?.['book']?.slice(-1)[0] || 0,
-      sellerCount: p.stats?.buyBoxSellerCount?.[1] || 0,
-      priceDropRisk: cur > 0 && cur < avg/100 * 0.85,
-      isDemo: false,
-    };
-  } catch(e) { log(`Keepaエラー: ${e.message}`); return null; }
+  }catch(e){log(`Keepaエラー: ${e.message}`);return null;}
 }
 
-// ── Continuous shooting ───────────────────────────
-let continuousMode = false;
+// ===== PROCESSING =====
+let contMode=false;
 
-function startContinuous() {
-  if (!state.geminiKey) {
-    document.getElementById('warn-banner').textContent = '⚠️ 設定からGemini APIキーを入力してください';
-    document.getElementById('warn-banner').style.display = '';
-    state.showSettings = true; renderSettings(); return;
+function startScan(){
+  if(!S.geminiKey){
+    document.getElementById('warn').textContent='⚠️ 設定からGemini APIキーを入力してください';
+    document.getElementById('warn').style.display='';
+    S.showSettings=true;renderSettings();return;
   }
-  continuousMode = true;
-  document.getElementById('stop-btn').style.display = '';
-  document.getElementById('scan-btn').textContent = '📷 次を撮影';
-  document.getElementById('file-input').click();
+  contMode=true;
+  document.getElementById('stopbtn').style.display='';
+  document.getElementById('scanbtn').textContent='📷 Research';
+  document.getElementById('fileinput').click();
 }
 
-function stopContinuous() {
-  continuousMode = false;
-  document.getElementById('stop-btn').style.display = 'none';
-  document.getElementById('scan-btn').textContent = '📷 撮影開始';
-  renderScanBtn();
+function stopScan(){
+  contMode=false;
+  document.getElementById('stopbtn').style.display='none';
+  document.getElementById('scanbtn').textContent='📷 撮影開始';
 }
 
-async function handleContinuous(input) {
-  const file = input.files[0];
-  input.value = '';
-  if (!file) { stopContinuous(); return; }
-
-  // 処理中でも連続撮影できるよう次の撮影を即座に開いてから処理
-  if (continuousMode) {
-    setTimeout(() => {
-      if (continuousMode) document.getElementById('file-input').click();
-    }, 500);
-  }
+async function onFile(input){
+  const file=input.files[0];
+  input.value='';
+  if(!file){stopScan();return;}
+  if(contMode) setTimeout(()=>{if(contMode) document.getElementById('fileinput').click();},800);
 
   log(`処理開始: ${file.name}`);
-  showProgress('🔮 Geminiで本を認識中...', 10);
-  try {
-    const bookList = await extractBooks(file);
-    log(`認識: ${bookList.length}冊`);
-    if (!bookList.length) { showProgress('本が認識できませんでした', 100); setTimeout(hideProgress, 2000); return; }
-    showProgress(`📚 ${bookList.length}冊認識 → データ取得中...`, 40);
+  showProg('🔮 Geminiで認識中...',10);
+  try{
+    const bookList=await extractBooks(file);
+    if(!bookList.length){showProg('本が認識できませんでした',100);setTimeout(hideProg,2000);return;}
+    showProg(`📚 ${bookList.length}冊認識 → データ取得中...`,40);
 
-    const entries = bookList.map(book => {
-      const id = ++state.counter;
-      state.books.unshift({ id, status: 'loading', bookInfo: book, keepa: null, verdict: 'loading', buyPrice: state.buyPrice });
-      return { id, book };
+    const entries=bookList.map(book=>{
+      const id=++S.counter;
+      S.books.unshift({id,status:'loading',bookInfo:book,keepa:null,verdict:'loading',buyPrice:S.buyPrice});
+      return{id,book};
     });
-    renderBooks(); renderHeader();
+    renderBooks();renderHeader();
 
-    let done = 0;
-    await Promise.all(entries.map(async ({ id, book }) => {
-      try {
-        const isbn = await lookupIsbn(book.title, book.author);
-        const keepa = isbn ? await fetchKeepa(isbn) : null;
-        const verdict = keepa ? classify(keepa, state.buyPrice) : 'unknown';
-        updateBook(id, { isbn, keepa, verdict, status: 'done' });
+    let done=0;
+    await Promise.all(entries.map(async({id,book})=>{
+      try{
+        const isbn=await lookupIsbn(book.title,book.author);
+        const keepa=isbn?await fetchKeepa(isbn):null;
+        const verdict=keepa?classify(keepa,S.buyPrice):'unknown';
+        updateBook(id,{isbn,keepa,verdict,status:'done'});
         log(`完了: ${book.title?.slice(0,20)} → ${verdict}`);
-      } catch(e) {
+      }catch(e){
         log(`エラー: ${e.message}`);
-        updateBook(id, { status: 'error', verdict: 'error' });
-      } finally {
+        updateBook(id,{status:'error',verdict:'error'});
+      }finally{
         done++;
-        showProgress(`📚 取得中... (${done}/${entries.length})`, 40 + Math.round(done/entries.length*55));
+        showProg(`📚 取得中... (${done}/${entries.length})`,40+Math.round(done/entries.length*55));
       }
     }));
-    showProgress(`✅ ${bookList.length}冊完了！`, 100);
-    setTimeout(hideProgress, 1500);
-  } catch(e) {
+    showProg(`✅ ${bookList.length}冊完了！`,100);
+    setTimeout(hideProg,1500);
+  }catch(e){
     log(`エラー: ${e.message}`);
-    showProgress(`❌ ${e.message}`, 100);
-    setTimeout(hideProgress, 3000);
+    showProg(`❌ ${e.message}`,100);
+    setTimeout(hideProg,3000);
   }
 }
 
-function updateBook(id, patch) {
-  state.books = state.books.map(b => b.id === id ? { ...b, ...patch } : b);
-  renderBooks(); renderHeader();
+function updateBook(id,patch){
+  S.books=S.books.map(b=>b.id===id?{...b,...patch}:b);
+  renderBooks();renderHeader();
+}
+function removeBook(id){S.books=S.books.filter(b=>b.id!==id);renderBooks();renderHeader();}
+function recheckAll(){
+  S.books=S.books.map(b=>b.keepa&&b.status==='done'?{...b,verdict:classify(b.keepa,b.buyPrice)}:b);
+  renderBooks();renderHeader();
+}
+function resetAll(){S.books=[];S.counter=0;S.logs=[];renderBooks();renderHeader();renderLog();hideProg();}
+
+// ===== RENDER =====
+function renderHeader(){
+  const buy=S.books.filter(b=>b.verdict==='buy').length;
+  const skip=S.books.filter(b=>b.verdict==='skip').length;
+  document.getElementById('stats').innerHTML=S.books.length?`<span class="buy">買い ${buy}冊</span>　<span class="skip">スキップ ${skip}冊</span>`:'';
 }
 
-function removeBook(id) {
-  state.books = state.books.filter(b => b.id !== id);
-  renderBooks(); renderHeader();
+function showProg(msg,pct){
+  const el=document.getElementById('progress');
+  el.style.display='';el.className='progress';
+  el.innerHTML=`<div class="ptop">${pct>=100?'<span>✅</span>':'<div class="spinner"></div>'}<span>${msg}</span></div><div class="pbar-wrap"><div class="pbar" style="width:${pct}%"></div></div>`;
+}
+function hideProg(){document.getElementById('progress').style.display='none';}
+
+function renderLog(){
+  const el=document.getElementById('logbox');
+  if(!S.showLog){el.style.display='none';return;}
+  el.className='logbox';el.style.display='';
+  el.textContent=S.logs.join('\n')||'ログなし';
 }
 
-function recheckAll() {
-  state.books = state.books.map(b => b.keepa && b.status === 'done' ? { ...b, verdict: classify(b.keepa, b.buyPrice) } : b);
-  renderBooks(); renderHeader();
-}
-
-// ── Render ────────────────────────────────────────
-function renderHeader() {
-  const buy = state.books.filter(b => b.verdict === 'buy').length;
-  const skip = state.books.filter(b => b.verdict === 'skip').length;
-  document.getElementById('header-stats').innerHTML = state.books.length
-    ? `<span class="buy">買い ${buy}冊</span>　<span class="skip">スキップ ${skip}冊</span>` : '';
-}
-
-function showProgress(msg, pct) {
-  const el = document.getElementById('progress-banner');
-  el.style.display = ''; el.className = 'progress-banner';
-  el.innerHTML = `<div class="progress-top">${pct>=100?'<span>✅</span>':'<div class="spinner"></div>'}<span>${msg}</span></div><div class="progress-bar-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>`;
-}
-function hideProgress() { document.getElementById('progress-banner').style.display = 'none'; }
-
-function renderLog() {
-  const el = document.getElementById('log-box');
-  if (!state.showLog) { el.style.display = 'none'; return; }
-  el.className = 'log-box'; el.style.display = '';
-  el.textContent = state.logs.join('\n') || 'ログなし';
-}
-
-function renderSettings() {
-  const el = document.getElementById('settings-panel');
-  if (!state.showSettings) { el.style.display = 'none'; return; }
-  el.className = 'settings-panel'; el.style.display = '';
-  const { minProfit, maxSalesRank, maxSellers, minListPrice } = state.thresholds;
-  el.innerHTML = `
-    <div class="section-label">APIキー</div>
-    <div class="field"><label>Gemini APIキー（必須）</label><input type="text" value="${state.geminiKey}" placeholder="AIzaSy..." oninput="state.geminiKey=this.value"></div>
-    <div class="field"><label>Keepa APIキー（未入力はデモデータ）</label><input type="text" value="${state.keepaKey}" placeholder="任意" oninput="state.keepaKey=this.value"></div>
+function renderSettings(){
+  const el=document.getElementById('settings');
+  if(!S.showSettings){el.style.display='none';return;}
+  el.className='settings';el.style.display='';
+  const{minProfit,maxSalesRank,maxSellers,minListPrice}=S.thresholds;
+  el.innerHTML=`
+    <div class="slabel">APIキー</div>
+    <div class="field"><label>Gemini APIキー（必須）</label><input type="text" value="${S.geminiKey}" placeholder="AIzaSy..." oninput="S.geminiKey=this.value"></div>
+    <div class="field"><label>Keepa APIキー（未入力はデモ）</label><input type="text" value="${S.keepaKey}" placeholder="任意" oninput="S.keepaKey=this.value"></div>
     <hr class="divider">
-    <div class="section-label">仕入れ設定</div>
-    <div class="field"><label>仕入れ価格（円）</label><input type="text" inputmode="numeric" value="${state.buyPrice}" oninput="state.buyPrice=Number(this.value)||0"></div>
-    <div class="field"><label>送料（円）</label><input type="text" inputmode="numeric" value="${state.shippingCost}" oninput="state.shippingCost=Number(this.value)||0"></div>
-    <div class="field">
-      <label>参照価格（コンディション）</label>
-      <select oninput="state.conditionGrade=this.value" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;color:var(--text);font-family:inherit;">
-        <option value="used"  ${state.conditionGrade==='used' ?'selected':''}>可以上（最安値）</option>
-        <option value="good"  ${state.conditionGrade==='good' ?'selected':''}>良い以上</option>
-        <option value="vgood" ${state.conditionGrade==='vgood'?'selected':''}>非常に良い以上</option>
+    <div class="slabel">仕入れ設定</div>
+    <div class="field"><label>仕入れ価格（円）</label><input type="text" inputmode="numeric" value="${S.buyPrice}" oninput="S.buyPrice=Number(this.value)||0"></div>
+    <div class="field"><label>送料（円）</label><input type="text" inputmode="numeric" value="${S.shippingCost}" oninput="S.shippingCost=Number(this.value)||0"></div>
+    <div class="field"><label>参照コンディション</label>
+      <select oninput="S.conditionGrade=this.value">
+        <option value="used" ${S.conditionGrade==='used'?'selected':''}>可以上（最安値）</option>
+        <option value="good" ${S.conditionGrade==='good'?'selected':''}>良い以上</option>
+        <option value="vgood" ${S.conditionGrade==='vgood'?'selected':''}>非常に良い以上</option>
       </select>
     </div>
-    <p style="font-size:11px;color:var(--text3);margin-top:4px">Amazon手数料16.5%を自動計算</p>
+    <p class="tnote">Amazon手数料16.5%を自動計算</p>
     <hr class="divider">
-    <div class="section-label">買い判定基準</div>
-    <div class="field"><label>最低利益額（¥ 以上）</label><input type="text" inputmode="numeric" value="${minProfit}" oninput="state.thresholds.minProfit=Number(this.value)||0"></div>
-    <div class="field"><label>Sales Rank 上限（以下）</label><input type="text" inputmode="numeric" value="${maxSalesRank}" oninput="state.thresholds.maxSalesRank=Number(this.value)||0"></div>
-    <div class="field"><label>出品者数 上限（人以下）</label><input type="text" inputmode="numeric" value="${maxSellers}" oninput="state.thresholds.maxSellers=Number(this.value)||0"></div>
-    <div class="field"><label>出品最低価格（¥ 以上）</label><input type="text" inputmode="numeric" value="${minListPrice}" oninput="state.thresholds.minListPrice=Number(this.value)||0"></div>
-    <p class="threshold-note">条件を変えると既存の結果も即再判定されます</p>
-    <button onclick="saveSettings()" style="width:100%;margin-top:14px;padding:12px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;">💾 設定を保存</button>
-    <div id="save-msg" style="display:none;text-align:center;font-size:12px;color:var(--green);margin-top:8px">✓ 保存しました</div>`;
+    <div class="slabel">買い判定基準</div>
+    <div class="field"><label>最低利益額（¥以上）</label><input type="text" inputmode="numeric" value="${minProfit}" oninput="S.thresholds.minProfit=Number(this.value)||0"></div>
+    <div class="field"><label>Sales Rank 上限（以下）</label><input type="text" inputmode="numeric" value="${maxSalesRank}" oninput="S.thresholds.maxSalesRank=Number(this.value)||0"></div>
+    <div class="field"><label>出品者数 上限（人以下）</label><input type="text" inputmode="numeric" value="${maxSellers}" oninput="S.thresholds.maxSellers=Number(this.value)||0"></div>
+    <div class="field"><label>出品最低価格（¥以上）</label><input type="text" inputmode="numeric" value="${minListPrice}" oninput="S.thresholds.minListPrice=Number(this.value)||0"></div>
+    <p class="tnote">条件変更で既存結果も即再判定</p>
+    <button class="savebtn" onclick="saveSettings()">💾 設定を保存</button>
+    <div class="savemsg" id="savemsg">✓ 保存しました</div>`;
 }
 
-function renderBooks() {
-  const el = document.getElementById('books-list');
-  if (!state.books.length) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔮</div><div class="empty-text">本棚を撮影すると<br>一括でリサーチ結果が<br>表示されます</div></div>`;
+function renderBooks(){
+  const el=document.getElementById('books');
+  if(!S.books.length){
+    el.innerHTML='<div class="empty"><div class="eicon">📚</div><div class="etext">本棚を撮影すると<br>リサーチ結果が表示されます</div></div>';
     return;
   }
-  const { minProfit, maxSalesRank, maxSellers, minListPrice } = state.thresholds;
-  el.innerHTML = state.books.map(b => {
-    const cls = b.status==='error'?'error':b.verdict==='buy'?'buy':b.verdict==='skip'?'skip':'loading';
-    const badge = b.status==='error'?'✕ 取得失敗':b.status==='loading'?'解析中':b.verdict==='buy'?'✓ 買い':'✕ スキップ';
-    const k = b.keepa;
-    const sellPrice = k ? getConditionPrice(k) : 0;
-    const amazonFee = k ? Math.floor(sellPrice * 0.165) : 0;
-    const profit = k ? Math.floor(sellPrice - b.buyPrice - state.shippingCost - amazonFee) : 0;
-    const condLabel = state.conditionGrade === 'vgood' ? '非常に良い以上' : state.conditionGrade === 'good' ? '良い以上' : '可以上';
-    return `<div class="card ${cls}">
-      <button class="remove-btn" onclick="removeBook(${b.id})">×</button>
-      <div class="card-badge">${badge}${b.status==='loading'?'<span class="loading-pulse"> …</span>':''}${k?.isDemo?'<span class="card-demo">デモ</span>':''}</div>
-      <div class="card-title">${b.bookInfo?.title||'取得中...'}</div>
-      <div class="card-author">${b.bookInfo?.author||''}</div>
-      ${k?`<div class="stats-grid">
-        <div class="stat-item"><div class="stat-label">参照価格（${condLabel}）</div><div class="stat-value ${sellPrice>=minListPrice?'good':'bad'}">¥${sellPrice.toLocaleString()}円</div></div>
-        <div class="stat-item"><div class="stat-label">利益目安</div><div class="stat-value ${profit>=minProfit?'good':'bad'}">¥${profit.toLocaleString()}円</div></div>
-        <div class="stat-item"><div class="stat-label">Amazon手数料</div><div class="stat-value neutral">¥${amazonFee.toLocaleString()}円</div></div>
-        <div class="stat-item"><div class="stat-label">Sales Rank</div><div class="stat-value ${k.salesRank<=maxSalesRank?'good':'bad'}">#${k.salesRank.toLocaleString()}</div></div>
-        <div class="stat-item"><div class="stat-label">出品者数</div><div class="stat-value ${k.sellerCount<=maxSellers?'good':'bad'}">${k.sellerCount}人</div></div>
-        <div class="stat-item full"><div class="stat-label">価格トレンド</div><div class="stat-value ${k.priceDropRisk?'bad':'good'}">${k.priceDropRisk?'⚠ 値下がり傾向':'✓ 安定'}</div></div>
-      </div>`:b.status==='loading'?'':'<div style="font-size:12px;color:var(--red);margin-top:4px">データ取得失敗</div>'}
+  const{minProfit,maxSalesRank,maxSellers,minListPrice}=S.thresholds;
+  el.innerHTML=S.books.map(b=>{
+    const cls=b.status==='error'?'error':b.verdict==='buy'?'buy':b.verdict==='skip'?'skip':'loading';
+    const badge=b.status==='error'?'✕ 取得失敗':b.status==='loading'?'解析中':b.verdict==='buy'?'✓ 買い':'✕ スキップ';
+    const k=b.keepa;
+    const sp=k?getPrice(k):0;
+    const fee=k?Math.floor(sp*.165):0;
+    const profit=k?Math.floor(sp-b.buyPrice-S.shippingCost-fee):0;
+    const condLabel=S.conditionGrade==='vgood'?'非常に良い以上':S.conditionGrade==='good'?'良い以上':'可以上';
+    return`<div class="card ${cls}">
+      <button class="rbtn" onclick="removeBook(${b.id})">×</button>
+      <div class="badge">${badge}${b.status==='loading'?'<span class="pulse"> …</span>':''}${k?.isDemo?`<span class="demo">デモ</span>`:''}</div>
+      <div class="ctitle">${b.bookInfo?.title||'取得中...'}</div>
+      <div class="cauthor">${b.bookInfo?.author||''}</div>
+      ${k?`<div class="sgrid">
+        <div class="si"><div class="slb">参照価格（${condLabel}）</div><div class="sv ${sp>=minListPrice?'good':'bad'}">¥${sp.toLocaleString()}円</div></div>
+        <div class="si"><div class="slb">利益目安</div><div class="sv ${profit>=minProfit?'good':'bad'}">¥${profit.toLocaleString()}円</div></div>
+        <div class="si"><div class="slb">手数料(16.5%)</div><div class="sv neutral">¥${fee.toLocaleString()}円</div></div>
+        <div class="si"><div class="slb">Sales Rank</div><div class="sv ${k.salesRank<=maxSalesRank?'good':'bad'}">#${k.salesRank.toLocaleString()}</div></div>
+        <div class="si"><div class="slb">出品者数</div><div class="sv ${k.sellerCount<=maxSellers?'good':'bad'}">${k.sellerCount}人</div></div>
+        <div class="si full"><div class="slb">価格トレンド</div><div class="sv ${k.priceDropRisk?'bad':'good'}">${k.priceDropRisk?'⚠ 値下がり傾向':'✓ 安定'}</div></div>
+      </div>`:b.status==='loading'?'':`<div style="font-size:12px;color:var(--red);margin-top:4px">データ取得失敗</div>`}
     </div>`;
   }).join('');
 }
 
-function renderScanBtn() {
-  const btn = document.getElementById('scan-btn');
-  btn.disabled = false;
-  btn.textContent = continuousMode ? '📷 次を撮影' : '📷 撮影開始';
+function saveSettings(){
+  persist();recheckAll();
+  const m=document.getElementById('savemsg');
+  if(m){m.style.display='';setTimeout(()=>{m.style.display='none';},2000);}
 }
-
-function saveSettings() {
-  save();
-  recheckAll();
-  const msg = document.getElementById('save-msg');
-  if (msg) {
-    msg.style.display = '';
-    setTimeout(() => { msg.style.display = 'none'; }, 2000);
-  }
-}
-
-function resetAll() {
-  if (state.books.length === 0) return;
-  state.books = [];
-  state.counter = 0;
-  state.logs = [];
-  renderBooks();
-  renderHeader();
-  renderLog();
-  hideProgress();
-}
-
-function toggleSettings() { state.showSettings = !state.showSettings; renderSettings(); }
-function toggleLog() { state.showLog = !state.showLog; renderLog(); }
+function toggleSettings(){S.showSettings=!S.showSettings;renderSettings();}
+function toggleLog(){S.showLog=!S.showLog;renderLog();}
 
 // Init
-renderHeader(); renderSettings(); renderLog(); renderBooks();
+renderHeader();renderSettings();renderLog();renderBooks();
 </script>
 </body>
 </html>
