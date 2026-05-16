@@ -585,7 +585,7 @@ function extractBooks(file){
          body:JSON.stringify({
            system_instruction:{parts:[{text:'JSONのみ返すAPIです。マークダウン不要。'}]},
            contents:[{parts:[{text:prompt}]}],
-           generationConfig:{maxOutputTokens:8192,temperature:0}
+           generationConfig:{maxOutputTokens:8192,temperature:1,thinkingConfig:{thinkingBudget:0}}
          })
         }
       ).then(function(r){return r.json();})
