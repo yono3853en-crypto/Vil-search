@@ -593,15 +593,24 @@ function extractBooks(file){
         var raw=(d.candidates&&d.candidates[0]&&d.candidates[0].content&&
           d.candidates[0].content.parts&&d.candidates[0].content.parts[0]&&
           d.candidates[0].content.parts[0].text)||'';
-        log('Gemini返答('+raw.length+'文字)');
+        log('Gemini返答('+raw.length+'文字): '+raw.slice(0,200));
         var t=raw.replace(/```json/gi,'').replace(/```/g,'').trim();
         var s=t.indexOf('['),e=t.lastIndexOf(']');
-        if(s===-1||e<=s){log('パース失敗');return[];}
-        var books=JSON.parse(t.slice(s,e+1));
-        books=books.filter(function(b){return b.title&&b.title.length>3;});
-        log('認識: '+books.length+'冊');
-        books.forEach(function(b){log('本: '+b.title.slice(0,25));});
-        return books;
+        if(s===-1||e<=s){
+          // オブジェクト形式の場合も試みる
+          var s2=t.indexOf('{'),e2=t.lastIndexOf('}');
+          if(s2!==-1&&e2>s2){
+            try{var obj=JSON.parse(t.slice(s2,e2+1));var books=[obj].filter(function(b){return b.title&&b.title.length>3;});log('認識: '+books.length+'冊');return books;}catch(x){}
+          }
+          log('パース失敗: '+t.slice(0,50));return[];
+        }
+        try{
+          var books=JSON.parse(t.slice(s,e+1));
+          books=books.filter(function(b){return b.title&&b.title.length>3;});
+          log('認識: '+books.length+'冊');
+          books.forEach(function(b){log('本: '+b.title.slice(0,25));});
+          return books;
+        }catch(x){log('パース失敗: '+x.message);return[];}
       });
     }).catch(function(e){log('エラー: '+e.message);return[];});
   });
