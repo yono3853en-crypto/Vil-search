@@ -430,7 +430,7 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
 <script>
 var S={
-  geminiKey:'',keepaKey:'',
+  geminiKey:'',keepaKey:'',visionKey:'',
   buyPrice:100,shippingCost:500,conditionGrade:'used',
   dataRange:90,
   thresholds:{minProfit:300,maxSalesRank:300000,maxSellers:5,minListPrice:500},
@@ -441,6 +441,7 @@ var S={
 try{
   var sv=JSON.parse(localStorage.getItem('vs5')||'{}');
   if(sv.geminiKey)S.geminiKey=sv.geminiKey;
+  if(sv.visionKey)S.visionKey=sv.visionKey;
   if(sv.keepaKey)S.keepaKey=sv.keepaKey;
   if(sv.buyPrice!=null)S.buyPrice=sv.buyPrice;
   if(sv.shippingCost!=null)S.shippingCost=sv.shippingCost;
@@ -451,7 +452,7 @@ try{
 
 function persist(){
   try{localStorage.setItem('vs5',JSON.stringify({
-    geminiKey:S.geminiKey,keepaKey:S.keepaKey,
+    geminiKey:S.geminiKey,visionKey:S.visionKey,keepaKey:S.keepaKey,
     buyPrice:S.buyPrice,shippingCost:S.shippingCost,
     conditionGrade:S.conditionGrade,dataRange:S.dataRange,thresholds:S.thresholds
   }));}catch(e){}
@@ -529,64 +530,64 @@ function extractBooks(file){
   return resizeImg(file).then(function(img){
     log('画像: '+img.w+'x'+img.h);
 
-    var numTiles=10;
-    var overlap=Math.floor(img.w*0.15);
-    var tileW=Math.ceil(img.w/numTiles);
-    var tiles=[];
+    // Cloud Vision APIで全文字+座標を取得
+    log('Cloud Vision API 送信');
+    return fetch('https://vision.googleapis.com/v1/images:annotate?key='+S.visionKey,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        requests:[{
+          image:{content:img.b64},
+          features:[{type:'DOCUMENT_TEXT_DETECTION',maxResults:1}],
+          imageContext:{languageHints:['ja','en']}
+        }]
+      })
+    }).then(function(r){return r.json();})
+    .then(function(d){
+      if(d.error){log('Vision APIエラー: '+d.error.message);return[];}
+      var resp=d.responses&&d.responses[0];
+      if(!resp||!resp.textAnnotations){log('テキスト未検出');return[];}
 
-    for(var i=0;i<numTiles;i++){
-      var sx=Math.max(0,i*tileW-overlap);
-      var ex=Math.min(img.w,(i+1)*tileW+overlap);
-      var sw=ex-sx;
-      var c=document.createElement('canvas');
-      c.width=sw*3;c.height=img.h*3;
-      var ctx=c.getContext('2d');
-      ctx.imageSmoothingEnabled=true;
-      ctx.imageSmoothingQuality='high';
-      ctx.drawImage(img.canvas,sx,0,sw,img.h,0,0,sw*3,img.h*3);
-      tiles.push({b64:c.toDataURL('image/jpeg',.9).split(',')[1],sx:sx,sw:sw});
-    }
+      // 最初のアノテーションは全文字を含む、2番目以降が個別の単語
+      var annotations=resp.textAnnotations.slice(1);
 
-    log('10分割・重複15%・3倍拡大');
+      // 各単語のX座標の中央値でグループ化
+      // 本の背表紙は縦に並ぶので、近いX座標の文字を同じ本としてグループ化
+      var groups=[];
+      annotations.forEach(function(ann){
+        var verts=ann.boundingPoly&&ann.boundingPoly.vertices||[];
+        var cx=verts.reduce(function(s,v){return s+(v.x||0);},0)/(verts.length||1);
+        var text=ann.description||'';
 
-    var prompt='この画像に写っている本の背表紙に書かれている文字を全て読んでください。\n'+
-      '絶対に守るルール：\n'+
-      '- 見えた文字をそのまま書く（推測・補完・創作禁止）\n'+
-      '- 帯は無視する\n'+
-      '- 1冊から1エントリのみ\n'+
-      '- 著者名・タイトル・サブタイトル全て含める\n'+
-      '- X座標は本の左端（ピクセル）\n\n'+
-      '[{"title":"見えた文字そのまま","author":"著者またはnull","x":左端X座標}]';
-
-    return Promise.all(tiles.map(function(tile,i){
-      log('タイル'+(i+1)+'/'+numTiles+' 送信');
-      return callGemini(tile.b64,prompt).then(function(raw){
-        log('タイル'+(i+1)+'返答('+raw.length+'文字)');
-        var parsed=parseJSON(raw)||[];
-        // X座標を元画像の座標系に変換
-        return parsed.map(function(b){
-          var relX=(b.x||0)/3;
-          return{title:b.title,author:b.author,x:tile.sx+relX};
-        });
-      }).catch(function(e){log('タイルエラー: '+e.message);return[];});
-    })).then(function(results){
-      var all=[];
-      results.forEach(function(arr){arr.forEach(function(b){all.push(b);});});
+        // 既存グループに近いものがあればマージ（閾値：画像幅の5%）
+        var threshold=img.w*0.05;
+        var merged=false;
+        for(var i=0;i<groups.length;i++){
+          if(Math.abs(groups[i].cx-cx)<threshold){
+            groups[i].texts.push(text);
+            groups[i].cx=(groups[i].cx+cx)/2;
+            merged=true;break;
+          }
+        }
+        if(!merged)groups.push({cx:cx,texts:[text]});
+      });
 
       // X座標でソート
-      all.sort(function(a,b){return(a.x||0)-(b.x||0);});
+      groups.sort(function(a,b){return a.cx-b.cx;});
 
-      // 重複除去（タイトル先頭15文字が同じものは統合）
-      var seen={};
-      var books=all.filter(function(b){
-        if(!b.title||b.title.trim().length<=3)return false;
-        var k=b.title.trim().slice(0,15);
-        if(seen[k])return false;
-        seen[k]=true;return true;
+      // 各グループをタイトルとして返す
+      var books=groups.map(function(g){
+        var title=g.texts.join('').replace(/\s+/g,'');
+        return{title:title,author:null,x:g.cx};
+      }).filter(function(b){
+        return b.title&&b.title.length>3;
       });
 
       log('認識: '+books.length+'冊');
       return books;
+    }).catch(function(e){
+      log('Vision APIエラー: '+e.message);
+      return[];
     });
   });
 }
@@ -685,8 +686,8 @@ function fetchKeepa(isbn){
 var contMode=false;
 
 function startScan(){
-  if(!S.geminiKey){
-    document.getElementById('warn').textContent='— Gemini APIキーを設定してください';
+  if(!S.visionKey){
+    document.getElementById('warn').textContent='— Cloud Vision APIキーを設定してください';
     document.getElementById('warn').style.display='';
     S.showSettings=true;renderSettings();return;
   }
@@ -788,7 +789,7 @@ function renderSettings(){
   var t=S.thresholds;
   el.innerHTML=
     '<span class="sec-label">API Configuration</span>'+
-    '<div class="field"><label>Gemini API Key</label><input type="text" value="'+S.geminiKey+'" placeholder="AIzaSy..." oninput="S.geminiKey=this.value"></div>'+
+    '<div class="field"><label>Cloud Vision API Key（タイトル認識・必須）</label><input type="text" value="'+S.visionKey+'" placeholder="AIzaSy..." oninput="S.visionKey=this.value"></div>'+
     '<div class="field"><label>Keepa API Key</label><input type="text" value="'+S.keepaKey+'" placeholder="Optional — demo mode if empty" oninput="S.keepaKey=this.value"></div>'+
     '<hr class="div">'+
     '<span class="sec-label">Purchase Settings</span>'+
