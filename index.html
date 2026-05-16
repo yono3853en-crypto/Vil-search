@@ -432,6 +432,7 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 var S={
   geminiKey:'',keepaKey:'',
   buyPrice:100,shippingCost:500,conditionGrade:'used',
+  dataRange:90,
   thresholds:{minProfit:300,maxSalesRank:300000,maxSellers:5,minListPrice:500},
   books:[],showSettings:false,showLog:false,
   logs:[],counter:0
@@ -444,6 +445,7 @@ try{
   if(sv.buyPrice!=null)S.buyPrice=sv.buyPrice;
   if(sv.shippingCost!=null)S.shippingCost=sv.shippingCost;
   if(sv.conditionGrade)S.conditionGrade=sv.conditionGrade;
+  if(sv.dataRange!=null)S.dataRange=sv.dataRange;
   if(sv.thresholds)S.thresholds=Object.assign({},S.thresholds,sv.thresholds);
 }catch(e){}
 
@@ -451,7 +453,7 @@ function persist(){
   try{localStorage.setItem('vs5',JSON.stringify({
     geminiKey:S.geminiKey,keepaKey:S.keepaKey,
     buyPrice:S.buyPrice,shippingCost:S.shippingCost,
-    conditionGrade:S.conditionGrade,thresholds:S.thresholds
+    conditionGrade:S.conditionGrade,dataRange:S.dataRange,thresholds:S.thresholds
   }));}catch(e){}
 }
 
@@ -527,20 +529,21 @@ function extractBooks(file){
   return resizeImg(file).then(function(img){
     log('画像: '+img.w+'x'+img.h);
     var tiles=[];
-    var half=Math.ceil(img.w/2);
-    for(var i=0;i<2;i++){
-      var sx=i*half,sw=Math.min(half,img.w-sx);
+    var numTiles=10;
+    var tileW=Math.ceil(img.w/numTiles);
+    for(var i=0;i<numTiles;i++){
+      var sx=i*tileW,sw=Math.min(tileW,img.w-sx);
       var c=document.createElement('canvas');
-      c.width=sw*2;c.height=img.h*2;
+      c.width=sw*6;c.height=img.h*6;
       var ctx=c.getContext('2d');
       ctx.imageSmoothingEnabled=true;
       ctx.imageSmoothingQuality='high';
-      ctx.drawImage(img.canvas,sx,0,sw,img.h,0,0,sw*2,img.h*2);
+      ctx.drawImage(img.canvas,sx,0,sw,img.h,0,0,sw*6,img.h*6);
       tiles.push(c.toDataURL('image/jpeg',.9).split(',')[1]);
     }
     var prompt='この本棚の背表紙を読んでください。\n絶対に守るルール：\n- 実際に写っている本だけ報告する\n- 見えた文字をそのまま書く（推測・補完・創作禁止）\n- 帯は無視する\n- 1冊から1タイトルのみ\n\n[{"title":"タイトル","author":"著者またはnull"}]';
     return Promise.all(tiles.map(function(t,i){
-      log('タイル'+(i+1)+'/2 送信');
+      log('タイル'+(i+1)+'/'+numTiles+' 送信');
       return callGemini(t,prompt).then(function(raw){
         log('タイル'+(i+1)+'返答('+raw.length+'文字)');
         return parseJSON(raw)||[];
@@ -564,16 +567,31 @@ function extractBooks(file){
 function lookupIsbn(title){
   var t=title.replace(/^[ぁ-ん一-龯]\s*\d+-\d+\s*/g,'').replace(/[のをがはにとでやなまへも]$/,'').trim()||title;
   log('ISBN検索: '+t.slice(0,25));
+
+  // Step1: CiNii
   return fetch('https://cir.nii.ac.jp/opensearch/books?title='+encodeURIComponent(t)+'&format=json&count=1')
   .then(function(r){return r.json();})
   .then(function(d){
     var item=d.items&&d.items[0];
-    if(!item){log('ISBN見つからず');return null;}
-    var ids=item['dc:identifier'];
-    if(!Array.isArray(ids)){return null;}
-    var obj=ids.find(function(i){return i['@type']==='cir:ISBN';});
-    if(obj&&obj['@value']){log('CiNii: '+obj['@value']);return obj['@value'];}
-    return null;
+    if(item){
+      var ids=item['dc:identifier'];
+      if(Array.isArray(ids)){
+        var obj=ids.find(function(i){return i['@type']==='cir:ISBN';});
+        if(obj&&obj['@value']){log('CiNii: '+obj['@value']);return obj['@value'];}
+      }
+    }
+    // Step2: Google Books
+    return fetch('https://www.googleapis.com/books/v1/volumes?q=intitle:'+encodeURIComponent(t)+'&maxResults=1&langRestrict=ja')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var ids=d.items&&d.items[0]&&d.items[0].volumeInfo&&d.items[0].volumeInfo.industryIdentifiers;
+      if(ids){
+        var isbn=ids.find(function(i){return i.type==='ISBN_13';});
+        if(isbn){log('Google Books: '+isbn.identifier);return isbn.identifier;}
+      }
+      log('ISBN見つからず');
+      return null;
+    }).catch(function(){log('ISBN見つからず');return null;});
   }).catch(function(e){log('CiNiiエラー: '+e.message);return null;});
 }
 
@@ -602,19 +620,34 @@ function fetchKeepa(isbn){
       }
       var p=d.products&&d.products[0];
       if(!p){log('Keepa: 商品なし');return null;}
-      function gl(idx){var a=(p.csv&&p.csv[idx]||[]).filter(function(v){return v>0;});return a.length?a[a.length-1]/100:null;}
-      var cur=gl(1)||gl(0)||0;
-      var arr=(p.csv&&p.csv[1]||[]).filter(function(v){return v>0;});
-      var recent=arr.slice(-20);
-      var avg=recent.length?recent.reduce(function(a,b){return a+b;},0)/recent.length:0;
-      log('Keepa: 成功');
+      function gl(idx){
+        var a=(p.csv&&p.csv[idx]||[]).filter(function(v){return v>0;});
+        if(!a.length)return null;
+        // データ範囲に応じて参照する件数を計算
+        // Keepaは約1時間ごとにデータを記録（最大24/日）
+        // dataRangeが0なら全データ
+        var count=S.dataRange===0?a.length:Math.min(a.length,S.dataRange*24);
+        var slice=a.slice(-count);
+        return{latest:slice[slice.length-1]/100,min:Math.min.apply(null,slice)/100,avg:slice.reduce(function(x,y){return x+y;},0)/slice.length/100};
+      }
+      var d1=gl(1)||gl(0);
+      if(!d1){log('Keepa: 価格データなし');return null;}
+      var cur=d1.latest;
+      var minPrice=d1.min;
+      var avgPrice=d1.avg;
+      var rangeLabel=S.dataRange===0?'全期間':S.dataRange+'日';
+      log('Keepa: 成功 ('+rangeLabel+' 最安¥'+Math.floor(minPrice)+' 平均¥'+Math.floor(avgPrice)+')');
+      function glLatest(idx){var a=(p.csv&&p.csv[idx]||[]).filter(function(v){return v>0;});return a.length?a[a.length-1]/100:null;}
       return{
         currentPrice:Math.floor(cur),
-        priceGood:gl(2)?Math.floor(gl(2)):null,
-        priceVGood:gl(3)?Math.floor(gl(3)):null,
+        minPrice:Math.floor(minPrice),
+        avgPrice:Math.floor(avgPrice),
+        priceGood:glLatest(2)?Math.floor(glLatest(2)):null,
+        priceVGood:glLatest(3)?Math.floor(glLatest(3)):null,
         salesRank:(p.salesRanks&&p.salesRanks['book']&&p.salesRanks['book'].slice(-1)[0])||0,
         sellerCount:(p.stats&&p.stats.buyBoxSellerCount&&p.stats.buyBoxSellerCount[1])||0,
-        priceDropRisk:cur>0&&cur<avg/100*.85,
+        priceDropRisk:cur>0&&cur<avgPrice*.85,
+        asin:p.asin||null,
         isDemo:false
       };
     }).catch(function(e){log('Keepaエラー: '+e.message);return null;});
@@ -666,10 +699,12 @@ function onFile(input){
       var entry=entries[i];
       showProg('取得中... '+(i+1)+' / '+entries.length,40+Math.round((i+1)/entries.length*55));
       lookupIsbn(entry.book.title).then(function(isbn){
-        return isbn?fetchKeepa(isbn):Promise.resolve(null);
-      }).then(function(keepa){
-        var verdict=keepa?classify(keepa,S.buyPrice):'unknown';
-        updateBook(entry.id,{keepa:keepa,verdict:verdict,status:'done'});
+        return Promise.resolve(isbn?fetchKeepa(isbn):null).then(function(keepa){
+          return{isbn:isbn,keepa:keepa};
+        });
+      }).then(function(res){
+        var verdict=res.keepa?classify(res.keepa,S.buyPrice):'unknown';
+        updateBook(entry.id,{isbn:res.isbn,keepa:res.keepa,verdict:verdict,status:'done'});
         log('完了: '+(entry.book.title||'').slice(0,20)+' → '+verdict);
       }).catch(function(e){
         log('エラー: '+e.message);
@@ -738,6 +773,15 @@ function renderSettings(){
     '<option value="good"'+(S.conditionGrade==='good'?' selected':'')+'>良い以上 — Good+</option>'+
     '<option value="vgood"'+(S.conditionGrade==='vgood'?' selected':'')+'>非常に良い以上 — Very Good+</option>'+
     '</select></div>'+
+    '<div class="field"><label>Price Data Range</label>'+
+    '<select oninput="S.dataRange=Number(this.value)">'+
+    '<option value="30"'+(S.dataRange===30?' selected':'')+'>1ヶ月</option>'+
+    '<option value="90"'+(S.dataRange===90?' selected':'')+'>3ヶ月</option>'+
+    '<option value="180"'+(S.dataRange===180?' selected':'')+'>6ヶ月</option>'+
+    '<option value="365"'+(S.dataRange===365?' selected':'')+'>1年</option>'+
+    '<option value="1095"'+(S.dataRange===1095?' selected':'')+'>3年</option>'+
+    '<option value="0"'+(S.dataRange===0?' selected':'')+'>全期間</option>'+
+    '</select></div>'+
     '<p class="note">Amazon fee 16.5% auto-calculated</p>'+
     '<hr class="div">'+
     '<span class="sec-label">Acquisition Criteria</span>'+
@@ -765,10 +809,13 @@ function renderBooks(){
     var fee=k?Math.floor(sp*.165):0;
     var profit=k?Math.floor(sp-b.buyPrice-S.shippingCost-fee):0;
     var cond=S.conditionGrade==='vgood'?'非常に良い+':S.conditionGrade==='good'?'良い+':'可以上';
+    var rangeLabel=S.dataRange===0?'全期間':S.dataRange===30?'1ヶ月':S.dataRange===90?'3ヶ月':S.dataRange===180?'6ヶ月':S.dataRange===365?'1年':'3年';
     var grid=k?
       '<div class="sgrid">'+
       '<div class="si"><div class="slb">参照価格 ('+cond+')</div><div class="sv '+(sp>=t.minListPrice?'g':'b')+'">¥'+sp.toLocaleString()+'</div></div>'+
       '<div class="si"><div class="slb">利益目安</div><div class="sv '+(profit>=t.minProfit?'g':'b')+'">¥'+profit.toLocaleString()+'</div></div>'+
+      '<div class="si"><div class="slb">'+rangeLabel+'最安値</div><div class="sv n">¥'+(k.minPrice||sp).toLocaleString()+'</div></div>'+
+      '<div class="si"><div class="slb">'+rangeLabel+'平均値</div><div class="sv n">¥'+(k.avgPrice||sp).toLocaleString()+'</div></div>'+
       '<div class="si"><div class="slb">Amazon手数料</div><div class="sv n">¥'+fee.toLocaleString()+'</div></div>'+
       '<div class="si"><div class="slb">Sales Rank</div><div class="sv '+(k.salesRank<=t.maxSalesRank?'g':'b')+'">#'+k.salesRank.toLocaleString()+'</div></div>'+
       '<div class="si"><div class="slb">出品者数</div><div class="sv '+(k.sellerCount<=t.maxSellers?'g':'b')+'">'+k.sellerCount+'人</div></div>'+
@@ -778,9 +825,14 @@ function renderBooks(){
     return '<div class="card '+cls+'">'+
       '<button class="rbtn" onclick="removeBook('+b.id+')">✕</button>'+
       '<div class="badge">'+badge+(b.status==='loading'?'<span class="pulse">  ·  ·  ·</span>':'')+(k&&k.isDemo?'<span class="demo">demo</span>':'')+'</div>'+
-      '<div class="ctitle">'+(b.bookInfo&&b.bookInfo.title||'—')+'</div>'+
-      '<div class="cauthor">'+(b.bookInfo&&b.bookInfo.author||'')+'</div>'+
-      grid+'</div>';
+      '<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:10px">'+
+      (b.isbn?'<img src="https://cover.openbd.jp/'+b.isbn+'.jpg" onerror="this.style.display=\'none\'" style="width:52px;flex-shrink:0;border-radius:4px;border:1px solid rgba(212,175,55,0.2)">':'<div style="width:52px;flex-shrink:0;height:72px;background:rgba(255,255,255,0.03);border-radius:4px;border:1px solid rgba(255,255,255,0.06)"></div>')+
+      '<div><div class="ctitle">'+(b.bookInfo&&b.bookInfo.title||'—')+'</div>'+
+      '<div class="cauthor">'+(b.bookInfo&&b.bookInfo.author||'')+'</div></div>'+
+      '</div>'+
+      grid+
+      (k&&k.asin?'<img src="https://graph.keepa.com/pricehistory.png?asin='+k.asin+'&domain=5&used=1&fbausedprice=1" style="width:100%;border-radius:6px;margin-top:10px;opacity:.85" onerror="this.style.display=\'none\'">':'')+
+      '</div>';
   }).join('');
 }
 
