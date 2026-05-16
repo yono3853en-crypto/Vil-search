@@ -529,7 +529,7 @@ function extractBooks(file){
   return resizeImg(file).then(function(img){
     log('画像: '+img.w+'x'+img.h);
     var tiles=[];
-    var numTiles=10;
+    var numTiles=20;
     var tileW=Math.ceil(img.w/numTiles);
     for(var i=0;i<numTiles;i++){
       var sx=i*tileW,sw=Math.min(tileW,img.w-sx);
