@@ -548,7 +548,13 @@ function extractBooks(file){
       var resp=d.responses&&d.responses[0];
       if(!resp||!resp.textAnnotations){log('テキスト未検出');return[];}
 
-      // 最初のアノテーションは全文字を含む、2番目以降が個別の単語
+      log('検出文字数: '+resp.textAnnotations.length);
+      // 最初の5単語をログに出す
+      resp.textAnnotations.slice(1,6).forEach(function(ann){
+        var verts=ann.boundingPoly&&ann.boundingPoly.vertices||[];
+        var cx=Math.round(verts.reduce(function(s,v){return s+(v.x||0);},0)/(verts.length||1));
+        log('単語: "'+ann.description+'" x='+cx);
+      });
       var annotations=resp.textAnnotations.slice(1);
 
       // 各単語のX座標の中央値でグループ化
