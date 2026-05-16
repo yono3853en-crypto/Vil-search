@@ -529,47 +529,65 @@ function extractBooks(file){
   return resizeImg(file).then(function(img){
     log('画像: '+img.w+'x'+img.h);
 
-    // 2倍拡大して1枚送信
-    var c=document.createElement('canvas');
-    c.width=img.w*2;c.height=img.h*2;
-    var ctx=c.getContext('2d');
-    ctx.imageSmoothingEnabled=true;
-    ctx.imageSmoothingQuality='high';
-    ctx.drawImage(img.canvas,0,0,img.w,img.h,0,0,img.w*2,img.h*2);
-    var b64=c.toDataURL('image/jpeg',.9).split(',')[1];
-    var w2=img.w*2;
+    var numTiles=10;
+    var overlap=Math.floor(img.w*0.15);
+    var tileW=Math.ceil(img.w/numTiles);
+    var tiles=[];
 
-    log('2倍拡大・1枚送信 ('+w2+'px幅)');
+    for(var i=0;i<numTiles;i++){
+      var sx=Math.max(0,i*tileW-overlap);
+      var ex=Math.min(img.w,(i+1)*tileW+overlap);
+      var sw=ex-sx;
+      var c=document.createElement('canvas');
+      c.width=sw*3;c.height=img.h*3;
+      var ctx=c.getContext('2d');
+      ctx.imageSmoothingEnabled=true;
+      ctx.imageSmoothingQuality='high';
+      ctx.drawImage(img.canvas,sx,0,sw,img.h,0,0,sw*3,img.h*3);
+      tiles.push({b64:c.toDataURL('image/jpeg',.9).split(',')[1],sx:sx,sw:sw});
+    }
 
-    var prompt='この本棚の各本の背表紙を左から順に読んでください。\n'+
-      '各本のタイトルと左端のX座標（ピクセル）を返してください。\n'+
-      '画像の幅は'+w2+'pxです。\n\n'+
+    log('10分割・重複15%・3倍拡大');
+
+    var prompt='この画像に写っている本の背表紙に書かれている文字を全て読んでください。\n'+
       '絶対に守るルール：\n'+
-      '- 実際に写っている本だけ報告する\n'+
       '- 見えた文字をそのまま書く（推測・補完・創作禁止）\n'+
       '- 帯は無視する\n'+
       '- 1冊から1エントリのみ\n'+
-      '- X座標は必ず数値で返す\n\n'+
-      '[{"title":"タイトル","author":"著者またはnull","x":左端のX座標}]';
+      '- 著者名・タイトル・サブタイトル全て含める\n'+
+      '- X座標は本の左端（ピクセル）\n\n'+
+      '[{"title":"見えた文字そのまま","author":"著者またはnull","x":左端X座標}]';
 
-    return callGemini(b64,prompt).then(function(raw){
-      log('Gemini返答('+raw.length+'文字)');
-      var parsed=parseJSON(raw);
-      if(!parsed||!parsed.length){log('認識失敗');return[];}
+    return Promise.all(tiles.map(function(tile,i){
+      log('タイル'+(i+1)+'/'+numTiles+' 送信');
+      return callGemini(tile.b64,prompt).then(function(raw){
+        log('タイル'+(i+1)+'返答('+raw.length+'文字)');
+        var parsed=parseJSON(raw)||[];
+        // X座標を元画像の座標系に変換
+        return parsed.map(function(b){
+          var relX=(b.x||0)/3;
+          return{title:b.title,author:b.author,x:tile.sx+relX};
+        });
+      }).catch(function(e){log('タイルエラー: '+e.message);return[];});
+    })).then(function(results){
+      var all=[];
+      results.forEach(function(arr){arr.forEach(function(b){all.push(b);});});
 
-      // X座標でソートして左から順に並べる
-      parsed.sort(function(a,b){return(a.x||0)-(b.x||0);});
+      // X座標でソート
+      all.sort(function(a,b){return(a.x||0)-(b.x||0);});
 
+      // 重複除去（タイトル先頭15文字が同じものは統合）
       var seen={};
-      var books=parsed.filter(function(b){
-        if(!b.title||b.title.trim().length<=4)return false;
+      var books=all.filter(function(b){
+        if(!b.title||b.title.trim().length<=3)return false;
         var k=b.title.trim().slice(0,15);
         if(seen[k])return false;
         seen[k]=true;return true;
       });
+
       log('認識: '+books.length+'冊');
       return books;
-    }).catch(function(e){log('Geminiエラー: '+e.message);return[];});
+    });
   });
 }
 
