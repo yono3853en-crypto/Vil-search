@@ -565,8 +565,8 @@ function extractBooks(file){
         var cx=verts.reduce(function(s,v){return s+(v.x||0);},0)/(verts.length||1);
         var text=ann.description||'';
 
-        // 既存グループに近いものがあればマージ（閾値：画像幅の5%）
-        var threshold=img.w*0.05;
+        // 既存グループに近いものがあればマージ（閾値：15px固定）
+        var threshold=15;
         var merged=false;
         for(var i=0;i<groups.length;i++){
           if(Math.abs(groups[i].cx-cx)<threshold){
