@@ -528,39 +528,48 @@ function parseJSON(text){
 function extractBooks(file){
   return resizeImg(file).then(function(img){
     log('画像: '+img.w+'x'+img.h);
-    var tiles=[];
-    var numTiles=20;
-    var tileW=Math.ceil(img.w/numTiles);
-    for(var i=0;i<numTiles;i++){
-      var sx=i*tileW,sw=Math.min(tileW,img.w-sx);
-      var c=document.createElement('canvas');
-      c.width=sw*6;c.height=img.h*6;
-      var ctx=c.getContext('2d');
-      ctx.imageSmoothingEnabled=true;
-      ctx.imageSmoothingQuality='high';
-      ctx.drawImage(img.canvas,sx,0,sw,img.h,0,0,sw*6,img.h*6);
-      tiles.push(c.toDataURL('image/jpeg',.9).split(',')[1]);
-    }
-    var prompt='この本棚の背表紙を読んでください。\n絶対に守るルール：\n- 実際に写っている本だけ報告する\n- 見えた文字をそのまま書く（推測・補完・創作禁止）\n- 帯は無視する\n- 1冊から1タイトルのみ\n\n[{"title":"タイトル","author":"著者またはnull"}]';
-    return Promise.all(tiles.map(function(t,i){
-      log('タイル'+(i+1)+'/'+numTiles+' 送信');
-      return callGemini(t,prompt).then(function(raw){
-        log('タイル'+(i+1)+'返答('+raw.length+'文字)');
-        return parseJSON(raw)||[];
-      }).catch(function(e){log('タイルエラー: '+e.message);return[];});
-    })).then(function(results){
-      var seen={};var books=[];
-      results.forEach(function(arr){
-        arr.forEach(function(b){
-          if(!b.title||b.title.trim().length<=4)return;
-          var k=b.title.trim().slice(0,15);
-          if(seen[k])return;
-          seen[k]=true;books.push(b);
-        });
+
+    // 2倍拡大して1枚送信
+    var c=document.createElement('canvas');
+    c.width=img.w*2;c.height=img.h*2;
+    var ctx=c.getContext('2d');
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality='high';
+    ctx.drawImage(img.canvas,0,0,img.w,img.h,0,0,img.w*2,img.h*2);
+    var b64=c.toDataURL('image/jpeg',.9).split(',')[1];
+    var w2=img.w*2;
+
+    log('2倍拡大・1枚送信 ('+w2+'px幅)');
+
+    var prompt='この本棚の各本の背表紙を左から順に読んでください。\n'+
+      '各本のタイトルと左端のX座標（ピクセル）を返してください。\n'+
+      '画像の幅は'+w2+'pxです。\n\n'+
+      '絶対に守るルール：\n'+
+      '- 実際に写っている本だけ報告する\n'+
+      '- 見えた文字をそのまま書く（推測・補完・創作禁止）\n'+
+      '- 帯は無視する\n'+
+      '- 1冊から1エントリのみ\n'+
+      '- X座標は必ず数値で返す\n\n'+
+      '[{"title":"タイトル","author":"著者またはnull","x":左端のX座標}]';
+
+    return callGemini(b64,prompt).then(function(raw){
+      log('Gemini返答('+raw.length+'文字)');
+      var parsed=parseJSON(raw);
+      if(!parsed||!parsed.length){log('認識失敗');return[];}
+
+      // X座標でソートして左から順に並べる
+      parsed.sort(function(a,b){return(a.x||0)-(b.x||0);});
+
+      var seen={};
+      var books=parsed.filter(function(b){
+        if(!b.title||b.title.trim().length<=4)return false;
+        var k=b.title.trim().slice(0,15);
+        if(seen[k])return false;
+        seen[k]=true;return true;
       });
       log('認識: '+books.length+'冊');
       return books;
-    });
+    }).catch(function(e){log('Geminiエラー: '+e.message);return[];});
   });
 }
 
