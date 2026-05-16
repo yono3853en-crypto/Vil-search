@@ -574,13 +574,13 @@ function extractBooks(file){
       log('ブロック数: '+blocks.length);
       blocks.sort(function(a,b){return a.cx-b.cx;});
 
-      // X座標が重複・近接するブロックを同じ本としてマージ
+      // X座標が実際に重複するブロックのみ同じ本としてマージ
       var groups=[];
       blocks.forEach(function(block){
         var merged=false;
         for(var i=0;i<groups.length;i++){
           var g=groups[i];
-          if(block.x1<=g.x2+20&&block.x2>=g.x1-20){
+          if(block.x1<g.x2&&block.x2>g.x1){
             g.texts.push(block.text);
             g.x1=Math.min(g.x1,block.x1);
             g.x2=Math.max(g.x2,block.x2);
