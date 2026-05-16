@@ -529,8 +529,6 @@ function parseJSON(text){
 function extractBooks(file){
   return resizeImg(file).then(function(img){
     log('画像: '+img.w+'x'+img.h);
-
-    // Cloud Vision APIで全文字+座標を取得
     log('Cloud Vision API 送信');
     return fetch('https://vision.googleapis.com/v1/images:annotate?key='+S.visionKey,{
       method:'POST',
@@ -546,55 +544,64 @@ function extractBooks(file){
     .then(function(d){
       if(d.error){log('Vision APIエラー: '+d.error.message);return[];}
       var resp=d.responses&&d.responses[0];
-      if(!resp||!resp.textAnnotations){log('テキスト未検出');return[];}
+      if(!resp){log('レスポンスなし');return[];}
+      var full=resp.fullTextAnnotation;
+      if(!full){log('テキスト未検出');return[];}
 
-      log('検出文字数: '+resp.textAnnotations.length);
-      // 最初の5単語をログに出す
-      resp.textAnnotations.slice(1,6).forEach(function(ann){
-        var verts=ann.boundingPoly&&ann.boundingPoly.vertices||[];
-        var cx=Math.round(verts.reduce(function(s,v){return s+(v.x||0);},0)/(verts.length||1));
-        log('単語: "'+ann.description+'" x='+cx);
+      // ブロックを収集（fullTextAnnotation使用）
+      var blocks=[];
+      (full.pages||[]).forEach(function(page){
+        (page.blocks||[]).forEach(function(block){
+          if(block.blockType&&block.blockType!=='TEXT')return;
+          if(block.confidence!=null&&block.confidence<0.3)return;
+          var verts=block.boundingBox&&block.boundingBox.vertices||[];
+          if(!verts.length)return;
+          var xs=verts.map(function(v){return v.x||0;});
+          var x1=Math.min.apply(null,xs);
+          var x2=Math.max.apply(null,xs);
+          var cx=(x1+x2)/2;
+          var text='';
+          (block.paragraphs||[]).forEach(function(para){
+            (para.words||[]).forEach(function(word){
+              if(word.confidence!=null&&word.confidence<0.3)return;
+              text+=(word.symbols||[]).map(function(s){return s.text||'';}).join('');
+            });
+          });
+          if(text.length>1)blocks.push({text:text,cx:cx,x1:x1,x2:x2});
+        });
       });
-      var annotations=resp.textAnnotations.slice(1);
 
-      // 各単語のX座標の中央値でグループ化
-      // 本の背表紙は縦に並ぶので、近いX座標の文字を同じ本としてグループ化
+      log('ブロック数: '+blocks.length);
+      blocks.sort(function(a,b){return a.cx-b.cx;});
+
+      // X座標が重複・近接するブロックを同じ本としてマージ
       var groups=[];
-      annotations.forEach(function(ann){
-        var verts=ann.boundingPoly&&ann.boundingPoly.vertices||[];
-        var cx=verts.reduce(function(s,v){return s+(v.x||0);},0)/(verts.length||1);
-        var text=ann.description||'';
-
-        // 既存グループに近いものがあればマージ（閾値：15px固定）
-        var threshold=15;
+      blocks.forEach(function(block){
         var merged=false;
         for(var i=0;i<groups.length;i++){
-          if(Math.abs(groups[i].cx-cx)<threshold){
-            groups[i].texts.push(text);
-            groups[i].cx=(groups[i].cx+cx)/2;
+          var g=groups[i];
+          if(block.x1<=g.x2+20&&block.x2>=g.x1-20){
+            g.texts.push(block.text);
+            g.x1=Math.min(g.x1,block.x1);
+            g.x2=Math.max(g.x2,block.x2);
+            g.cx=(g.x1+g.x2)/2;
             merged=true;break;
           }
         }
-        if(!merged)groups.push({cx:cx,texts:[text]});
+        if(!merged)groups.push({texts:[block.text],x1:block.x1,x2:block.x2,cx:block.cx});
       });
 
-      // X座標でソート
       groups.sort(function(a,b){return a.cx-b.cx;});
+      log('グループ数: '+groups.length);
 
-      // 各グループをタイトルとして返す
       var books=groups.map(function(g){
-        var title=g.texts.join('').replace(/\s+/g,'');
-        return{title:title,author:null,x:g.cx};
-      }).filter(function(b){
-        return b.title&&b.title.length>3;
-      });
+        return{title:g.texts.join(''),author:null,x:g.cx};
+      }).filter(function(b){return b.title&&b.title.length>3;});
 
       log('認識: '+books.length+'冊');
+      books.forEach(function(b){log('本: '+b.title.slice(0,30)+' (x='+Math.round(b.x)+')');});
       return books;
-    }).catch(function(e){
-      log('Vision APIエラー: '+e.message);
-      return[];
-    });
+    }).catch(function(e){log('Vision APIエラー: '+e.message);return[];});
   });
 }
 
