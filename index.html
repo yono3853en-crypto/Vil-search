@@ -529,7 +529,8 @@ function parseJSON(text){
 function extractBooks(file){
   return resizeImg(file).then(function(img){
     log('画像: '+img.w+'x'+img.h);
-    log('Cloud Vision API 送信');
+    log('Step1: Cloud Vision 文字抽出');
+
     return fetch('https://vision.googleapis.com/v1/images:annotate?key='+S.visionKey,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -544,64 +545,65 @@ function extractBooks(file){
     .then(function(d){
       if(d.error){log('Vision APIエラー: '+d.error.message);return[];}
       var resp=d.responses&&d.responses[0];
-      if(!resp){log('レスポンスなし');return[];}
-      var full=resp.fullTextAnnotation;
-      if(!full){log('テキスト未検出');return[];}
+      if(!resp||!resp.fullTextAnnotation){log('テキスト未検出');return[];}
 
-      // ブロックを収集（fullTextAnnotation使用）
-      var blocks=[];
-      (full.pages||[]).forEach(function(page){
+      // 全テキストを取得（座標付き行単位）
+      var lines=[];
+      (resp.fullTextAnnotation.pages||[]).forEach(function(page){
         (page.blocks||[]).forEach(function(block){
           if(block.blockType&&block.blockType!=='TEXT')return;
-          if(block.confidence!=null&&block.confidence<0.3)return;
-          var verts=block.boundingBox&&block.boundingBox.vertices||[];
-          if(!verts.length)return;
-          var xs=verts.map(function(v){return v.x||0;});
-          var x1=Math.min.apply(null,xs);
-          var x2=Math.max.apply(null,xs);
-          var cx=(x1+x2)/2;
-          var text='';
           (block.paragraphs||[]).forEach(function(para){
-            (para.words||[]).forEach(function(word){
-              if(word.confidence!=null&&word.confidence<0.3)return;
-              text+=(word.symbols||[]).map(function(s){return s.text||'';}).join('');
-            });
+            var verts=para.boundingBox&&para.boundingBox.vertices||[];
+            var cx=verts.length?verts.reduce(function(s,v){return s+(v.x||0);},0)/verts.length:0;
+            var text=(para.words||[]).map(function(w){
+              return(w.symbols||[]).map(function(s){return s.text||'';}).join('');
+            }).join('');
+            if(text.length>1)lines.push({text:text,cx:Math.round(cx)});
           });
-          if(text.length>1)blocks.push({text:text,cx:cx,x1:x1,x2:x2});
         });
       });
 
-      log('ブロック数: '+blocks.length);
-      blocks.sort(function(a,b){return a.cx-b.cx;});
+      lines.sort(function(a,b){return a.cx-b.cx;});
+      var rawText=lines.map(function(l){return l.text+'[x='+l.cx+']';}).join('\n');
+      log('抽出行数: '+lines.length);
 
-      // X座標が実際に重複するブロックのみ同じ本としてマージ
-      var groups=[];
-      blocks.forEach(function(block){
-        var merged=false;
-        for(var i=0;i<groups.length;i++){
-          var g=groups[i];
-          if(block.x1<g.x2&&block.x2>g.x1){
-            g.texts.push(block.text);
-            g.x1=Math.min(g.x1,block.x1);
-            g.x2=Math.max(g.x2,block.x2);
-            g.cx=(g.x1+g.x2)/2;
-            merged=true;break;
-          }
+      // Step2: Geminiでタイトル分類（テキストのみ・安い）
+      log('Step2: Gemini タイトル分類');
+      var prompt='以下は本棚から読み取った文字です。[x=数字]はX座標（左から右の位置）です。\n'+
+        'X座標が近い文字は同じ本の背表紙の文字です。\n'+
+        '各本のタイトルと著者名を抽出してください。\n\n'+
+        '絶対に守るルール：\n'+
+        '- 見えた文字から判断する（推測・補完禁止）\n'+
+        '- 出版社名・ISBN・価格は除外\n'+
+        '- 1冊1エントリ\n\n'+
+        rawText+'\n\n'+
+        '[{"title":"タイトル","author":"著者またはnull"}]';
+
+      return fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+S.geminiKey,
+        {method:'POST',headers:{'Content-Type':'application/json'},
+         body:JSON.stringify({
+           system_instruction:{parts:[{text:'JSONのみ返すAPIです。マークダウン不要。'}]},
+           contents:[{parts:[{text:prompt}]}],
+           generationConfig:{maxOutputTokens:4096,temperature:0}
+         })
         }
-        if(!merged)groups.push({texts:[block.text],x1:block.x1,x2:block.x2,cx:block.cx});
+      ).then(function(r){return r.json();})
+      .then(function(d){
+        var raw=(d.candidates&&d.candidates[0]&&d.candidates[0].content&&
+          d.candidates[0].content.parts&&d.candidates[0].content.parts[0]&&
+          d.candidates[0].content.parts[0].text)||'';
+        log('Gemini返答('+raw.length+'文字)');
+        var t=raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+        var s=t.indexOf('['),e=t.lastIndexOf(']');
+        if(s===-1||e<=s){log('パース失敗');return[];}
+        var books=JSON.parse(t.slice(s,e+1));
+        books=books.filter(function(b){return b.title&&b.title.length>3;});
+        log('認識: '+books.length+'冊');
+        books.forEach(function(b){log('本: '+b.title.slice(0,25));});
+        return books;
       });
-
-      groups.sort(function(a,b){return a.cx-b.cx;});
-      log('グループ数: '+groups.length);
-
-      var books=groups.map(function(g){
-        return{title:g.texts.join(''),author:null,x:g.cx};
-      }).filter(function(b){return b.title&&b.title.length>3;});
-
-      log('認識: '+books.length+'冊');
-      books.forEach(function(b){log('本: '+b.title.slice(0,30)+' (x='+Math.round(b.x)+')');});
-      return books;
-    }).catch(function(e){log('Vision APIエラー: '+e.message);return[];});
+    }).catch(function(e){log('エラー: '+e.message);return[];});
   });
 }
 
@@ -699,8 +701,8 @@ function fetchKeepa(isbn){
 var contMode=false;
 
 function startScan(){
-  if(!S.visionKey){
-    document.getElementById('warn').textContent='— Cloud Vision APIキーを設定してください';
+  if(!S.visionKey||!S.geminiKey){
+    document.getElementById('warn').textContent='— Cloud Vision APIキーとGemini APIキーを設定してください';
     document.getElementById('warn').style.display='';
     S.showSettings=true;renderSettings();return;
   }
@@ -802,7 +804,8 @@ function renderSettings(){
   var t=S.thresholds;
   el.innerHTML=
     '<span class="sec-label">API Configuration</span>'+
-    '<div class="field"><label>Cloud Vision API Key（タイトル認識・必須）</label><input type="text" value="'+S.visionKey+'" placeholder="AIzaSy..." oninput="S.visionKey=this.value"></div>'+
+    '<div class="field"><label>Cloud Vision API Key（文字認識・必須）</label><input type="text" value="'+S.visionKey+'" placeholder="AIzaSy..." oninput="S.visionKey=this.value"></div>'+
+    '<div class="field"><label>Gemini API Key（タイトル分類・必須）</label><input type="text" value="'+S.geminiKey+'" placeholder="AIzaSy..." oninput="S.geminiKey=this.value"></div>'+
     '<div class="field"><label>Keepa API Key</label><input type="text" value="'+S.keepaKey+'" placeholder="Optional — demo mode if empty" oninput="S.keepaKey=this.value"></div>'+
     '<hr class="div">'+
     '<span class="sec-label">Purchase Settings</span>'+
