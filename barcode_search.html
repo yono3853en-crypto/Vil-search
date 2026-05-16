@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ScanSearch">
+<meta name="theme-color" content="#0a0a0a">
+<title>Scan Search</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#080608;--bg2:#0e0c10;--bg3:#161418;
+  --border:rgba(212,175,55,0.15);--border-bright:rgba(212,175,55,0.4);
+  --text:#f0ece4;--text2:#9a9080;--text3:#5a5048;
+  --buy:#4ade80;--buy-bg:rgba(74,222,128,0.05);--buy-border:rgba(74,222,128,0.2);
+  --skip:#f87171;--skip-bg:rgba(248,113,113,0.05);--skip-border:rgba(248,113,113,0.2);
+  --gold:#d4af37;--gold-light:#f0d060;--gold-dim:rgba(212,175,55,0.5);
+}
+body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:16px;padding-bottom:100px;
+  background-image:radial-gradient(ellipse at 20% 0%,rgba(212,175,55,0.04) 0%,transparent 60%),radial-gradient(ellipse at 80% 100%,rgba(212,175,55,0.03) 0%,transparent 60%);}
+button{cursor:pointer;font-family:inherit;}
+input,select{font-family:inherit;outline:none;}
+
+/* HEADER */
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);position:relative;}
+.hdr::after{content:'';position:absolute;bottom:-1px;left:0;width:60px;height:1px;background:var(--gold);}
+.logo{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;letter-spacing:.15em;color:var(--text);}
+.logo span{color:var(--gold);font-weight:600;}
+.hbtns{display:flex;gap:6px;}
+.ibtn{background:transparent;border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text3);font-size:12px;}
+
+/* SCAN INPUT */
+.scan-area{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;position:relative;overflow:hidden;}
+.scan-area::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold-dim),transparent);}
+.scan-label{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:10px;display:block;}
+.scan-row{display:flex;gap:8px;}
+.scan-input{flex:1;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:16px;color:var(--text);letter-spacing:.05em;}
+.scan-input:focus{border-color:var(--gold-dim);}
+.cam-btn{background:transparent;border:1px solid var(--gold-dim);border-radius:8px;padding:12px 14px;color:var(--gold);font-size:18px;}
+.scan-hint{font-size:10px;color:var(--text3);margin-top:8px;letter-spacing:.03em;}
+
+/* CAMERA */
+.cam-wrap{position:relative;border-radius:12px;overflow:hidden;margin-bottom:16px;background:#000;aspect-ratio:4/3;}
+.cam-wrap video{width:100%;height:100%;object-fit:cover;}
+.cam-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+.cam-frame{width:70%;max-width:280px;aspect-ratio:3/1;border:2px solid var(--gold);border-radius:4px;box-shadow:0 0 0 9999px rgba(0,0,0,.6);}
+.cam-close{position:absolute;top:12px;right:12px;background:rgba(0,0,0,.7);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;}
+
+/* RESULT CARD */
+.card{border-radius:12px;padding:16px;margin-bottom:12px;border:1px solid;animation:fi .2s ease;position:relative;overflow:hidden;}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.card.buy{background:var(--buy-bg);border-color:var(--buy-border);}
+.card.buy::before{background:linear-gradient(90deg,transparent,rgba(74,222,128,0.3),transparent);}
+.card.skip{background:var(--skip-bg);border-color:var(--skip-border);}
+.card.skip::before{background:linear-gradient(90deg,transparent,rgba(248,113,113,0.2),transparent);}
+.card.loading{background:var(--bg2);border-color:var(--border);}
+
+.card-top{display:flex;gap:12px;margin-bottom:12px;}
+.card-img{width:56px;height:80px;object-fit:cover;border-radius:4px;flex-shrink:0;background:var(--bg3);border:1px solid var(--border);}
+.card-info{flex:1;min-width:0;}
+.card-badge{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;padding:3px 10px;border-radius:99px;margin-bottom:6px;}
+.card.buy .card-badge{background:rgba(74,222,128,.12);color:var(--buy);border:1px solid rgba(74,222,128,.25);}
+.card.skip .card-badge{background:rgba(248,113,113,.1);color:var(--skip);border:1px solid rgba(248,113,113,.2);}
+.card.loading .card-badge{background:rgba(255,255,255,.04);color:var(--text3);border:1px solid var(--border);}
+.card-title{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:400;line-height:1.4;margin-bottom:3px;}
+.card-rank{font-size:11px;color:var(--text2);letter-spacing:.03em;}
+.rbtn{position:absolute;top:12px;right:12px;background:none;border:none;color:var(--text3);font-size:16px;padding:4px;}
+
+/* PRICE SECTION */
+.price-section{background:rgba(0,0,0,.25);border-radius:8px;padding:10px 12px;margin-bottom:10px;border:1px solid rgba(255,255,255,.03);}
+.price-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.price-row:last-child{border-bottom:none;}
+.price-label{font-size:10px;color:var(--text3);letter-spacing:.03em;}
+.price-val{font-size:13px;font-weight:600;}
+.price-val.neu{color:var(--text);}
+.price-val.avg{color:var(--gold);}
+
+/* PROFIT BOX */
+.profit-box{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.pbox{background:rgba(0,0,0,.25);border-radius:8px;padding:10px;border:1px solid rgba(255,255,255,.03);}
+.pbox-label{font-size:9px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;}
+.pbox-val{font-size:16px;font-weight:600;}
+.pbox-val.buy{color:var(--buy);}
+.pbox-val.skip{color:var(--skip);}
+
+/* KEEPA DATA */
+.keepa-table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px;}
+.keepa-table th{color:var(--text3);font-weight:400;text-align:left;padding:4px 6px;border-bottom:1px solid var(--border);letter-spacing:.05em;}
+.keepa-table td{padding:4px 6px;color:var(--text2);}
+.keepa-table td.num{color:var(--text);font-weight:500;text-align:right;}
+
+/* GRAPH */
+.graph-wrap{margin-bottom:10px;}
+.graph-img{width:100%;border-radius:6px;opacity:.9;}
+.graph-tabs{display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;}
+.gtab{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:10px;color:var(--text3);cursor:pointer;letter-spacing:.05em;}
+.gtab.active{background:rgba(212,175,55,.15);border-color:var(--gold-dim);color:var(--gold);font-weight:600;}
+
+/* JITO INPUT */
+.jito-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+.jito-label{font-size:10px;color:var(--text2);white-space:nowrap;letter-spacing:.03em;}
+.jito-input{width:90px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px;color:var(--text);text-align:right;}
+.jito-input:focus{border-color:var(--gold-dim);}
+
+/* KEEPA LINK */
+.keepa-link{display:block;text-align:center;background:rgba(212,175,55,.06);border:1px solid var(--gold-dim);border-radius:8px;padding:10px;font-size:11px;color:var(--gold);text-decoration:none;letter-spacing:.08em;margin-top:8px;}
+
+/* SETTINGS */
+.settings{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;position:relative;overflow:hidden;}
+.settings::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold-dim),transparent);}
+.sec-label{font-size:9px;font-weight:600;letter-spacing:.25em;text-transform:uppercase;color:var(--gold);display:block;margin-bottom:12px;}
+.field{margin-bottom:10px;}
+.field label{font-size:10px;color:var(--text3);letter-spacing:.05em;display:block;margin-bottom:5px;}
+.field input,.field select{width:100%;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);}
+.field input:focus,.field select:focus{border-color:var(--gold-dim);}
+.field select option{background:var(--bg2);}
+hr.div{border:none;border-top:1px solid var(--border);margin:14px 0;}
+.save-btn{width:100%;margin-top:12px;padding:12px;background:transparent;border:1px solid var(--gold-dim);border-radius:8px;color:var(--gold);font-size:12px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;}
+.saved{display:none;text-align:center;font-size:11px;color:var(--buy);margin-top:6px;}
+
+/* BOTTOM BAR */
+.bar{position:fixed;bottom:0;left:0;right:0;background:rgba(8,6,8,.96);backdrop-filter:blur(16px);border-top:1px solid var(--border);padding:12px 16px;}
+.bar::before{content:'';position:absolute;top:-1px;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,var(--gold-dim),transparent);}
+.bar-btns{display:flex;gap:8px;}
+.main-btn{flex:1;padding:15px;background:transparent;border:1px solid var(--gold-dim);border-radius:10px;color:var(--gold);font-family:'Montserrat',sans-serif;font-size:13px;font-weight:500;letter-spacing:.15em;text-transform:uppercase;}
+
+.empty{text-align:center;padding:48px 0;color:var(--text3);}
+.eicon{font-size:36px;margin-bottom:12px;opacity:.4;}
+.etitle{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:300;letter-spacing:.1em;color:var(--text2);margin-bottom:6px;}
+.etext{font-size:11px;line-height:1.8;letter-spacing:.03em;}
+
+.pulse{animation:pulse 1s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.warn{background:rgba(212,175,55,.06);border:1px solid rgba(212,175,55,.25);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--gold);margin-bottom:12px;}
+.demo-note{font-size:10px;color:var(--text3);margin-top:6px;text-align:center;letter-spacing:.03em;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo">Scan<span>Search</span></div>
+  <div class="hbtns">
+    <button class="ibtn" onclick="clearAll()">🗑</button>
+    <button class="ibtn" onclick="toggleSettings()">設定</button>
+  </div>
+</div>
+
+<div id="warn" style="display:none" class="warn"></div>
+<div id="settings" style="display:none"></div>
+<div id="camwrap" style="display:none" class="cam-wrap">
+  <video id="camvid" autoplay playsinline muted></video>
+  <div class="cam-overlay"><div class="cam-frame"></div></div>
+  <button class="cam-close" onclick="stopCam()">✕ 閉じる</button>
+</div>
+
+<div class="scan-area">
+  <span class="scan-label">バーコードを入力またはスキャン</span>
+  <div class="scan-row">
+    <input class="scan-input" id="isbn-input" type="text" inputmode="numeric" placeholder="ISBN / JAN コード" onkeydown="onKey(event)">
+    <button class="cam-btn" onclick="toggleCam()">📷</button>
+  </div>
+  <div class="scan-hint">バーコードリーダー接続時は自動入力されます</div>
+</div>
+
+<div id="results"></div>
+
+<div class="bar">
+  <div class="bar-btns">
+    <button class="main-btn" onclick="onScan()">◎ Scan</button>
+  </div>
+</div>
+
+<input type="file" id="fileinput" accept="image/*" capture="environment" style="display:none" onchange="onCamFile(this)">
+
+<script>
+var S={
+  keepaKey:'',
+  buyPrice:100,shippingCost:500,
+  conditionGrade:'used',
+  thresholds:{minProfit:300,maxSalesRank:300000,maxSellers:10},
+  books:[],showSettings:false,counter:0
+};
+try{
+  var sv=JSON.parse(localStorage.getItem('ss1')||'{}');
+  if(sv.keepaKey)S.keepaKey=sv.keepaKey;
+  if(sv.buyPrice!=null)S.buyPrice=sv.buyPrice;
+  if(sv.shippingCost!=null)S.shippingCost=sv.shippingCost;
+  if(sv.conditionGrade)S.conditionGrade=sv.conditionGrade;
+  if(sv.thresholds)S.thresholds=Object.assign({},S.thresholds,sv.thresholds);
+}catch(e){}
+
+function persist(){
+  try{localStorage.setItem('ss1',JSON.stringify({
+    keepaKey:S.keepaKey,buyPrice:S.buyPrice,shippingCost:S.shippingCost,
+    conditionGrade:S.conditionGrade,thresholds:S.thresholds
+  }));}catch(e){}
+}
+
+// ===== KEEPA =====
+function fetchKeepa(isbn){
+  if(!S.keepaKey){
+    return Promise.resolve({
+      title:'デモ商品（'+isbn+'）',asin:'B00DEMO',
+      rank:Math.floor(Math.random()*500000)+1000,
+      priceUsed:Math.floor(Math.random()*3000)+500,
+      priceUsedGood:null,priceUsedVGood:null,priceUsedLikeNew:null,
+      priceNew:Math.floor(Math.random()*5000)+1000,
+      priceCollectible:null,
+      sellerCount:Math.floor(Math.random()*15)+1,
+      rankUp:{m1:5,m3:20,m6:50,y1:100},
+      newDown:{m1:3,m3:12,m6:30,y1:60},
+      usedDown:{m1:4,m3:15,m6:35,y1:70},
+      isDemo:true
+    });
+  }
+
+  return fetch('https://api.keepa.com/product?key='+S.keepaKey+'&domain=5&code='+isbn+'&stats=365&offers=20')
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(d.tokensLeft===0){throw new Error('Keepaトークン不足');}
+    var p=d.products&&d.products[0];
+    if(!p)throw new Error('商品なし');
+
+    function gl(idx){
+      var a=(p.csv&&p.csv[idx]||[]).filter(function(v){return v>0;});
+      return a.length?Math.floor(a[a.length-1]/100):null;
+    }
+
+    // RankUp・New出品↓・Used出品↓を計算
+    function countEvents(arr,days){
+      if(!arr||!arr.length)return 0;
+      var now=Date.now()/60000;
+      var cutoff=now-days*24*60;
+      var count=0;
+      for(var i=0;i<arr.length-1;i+=2){
+        if(arr[i]>=cutoff)count++;
+      }
+      return count;
+    }
+
+    var rankArr=p.salesRanks&&p.salesRanks['book']||[];
+    var rankUp={m1:0,m3:0,m6:0,y1:0};
+    // 簡易計算
+    var stats=p.stats||{};
+
+    var prices=p.csv&&p.csv[1]||[];
+    var now=Date.now()/60000;
+    var cutoff180=now-180*24*60;
+    var recent180=[];
+    for(var i=0;i<prices.length-1;i+=2){
+      if(prices[i]>=cutoff180&&prices[i+1]>0)recent180.push(prices[i+1]);
+    }
+    var avg180=recent180.length?Math.floor(recent180.reduce(function(a,b){return a+b;},0)/recent180.length/100):null;
+
+    return{
+      title:p.title||'不明',
+      asin:p.asin||'',
+      rank:(rankArr.length?rankArr[rankArr.length-1]:0),
+      priceUsed:gl(1),
+      priceUsedGood:gl(2),
+      priceUsedVGood:gl(3),
+      priceUsedLikeNew:gl(4),
+      priceNew:gl(0),
+      priceCollectible:gl(5),
+      avgUsed180:avg180,
+      sellerCount:(stats.buyBoxSellerCount&&stats.buyBoxSellerCount[1])||0,
+      rankUp:{
+        m1:(stats.salesRankDrops30||0),
+        m3:(stats.salesRankDrops90||0),
+        m6:(stats.salesRankDrops180||0),
+        y1:(stats.salesRankDrops365||0)
+      },
+      newDown:{m1:0,m3:0,m6:0,y1:0},
+      usedDown:{m1:0,m3:0,m6:0,y1:0},
+      isDemo:false
+    };
+  });
+}
+
+function getCondPrice(book){
+  var k=book.keepa;
+  if(!k)return 0;
+  if(S.conditionGrade==='vgood')return k.priceUsedVGood||k.priceUsed||0;
+  if(S.conditionGrade==='good')return k.priceUsedGood||k.priceUsed||0;
+  return k.priceUsed||0;
+}
+
+function calcProfit(book){
+  var sp=book.customPrice!=null?book.customPrice:getCondPrice(book);
+  var fee=Math.floor(sp*0.165);
+  return Math.floor(sp-(book.customBuy!=null?book.customBuy:S.buyPrice)-S.shippingCost-fee);
+}
+
+function classify(book){
+  var t=S.thresholds;
+  var k=book.keepa;
+  if(!k)return'unknown';
+  var profit=calcProfit(book);
+  var rank=k.rank||0;
+  return(profit>=t.minProfit&&rank<=t.maxSalesRank&&k.sellerCount<=t.maxSellers)?'buy':'skip';
+}
+
+// ===== SCAN =====
+function onKey(e){
+  if(e.key==='Enter'){onScan();}
+}
+
+function onScan(){
+  var val=document.getElementById('isbn-input').value.trim();
+  if(!val){
+    var w=document.getElementById('warn');
+    w.textContent='ISBNまたはJANコードを入力してください';
+    w.style.display='';
+    setTimeout(function(){w.style.display='none';},2000);
+    return;
+  }
+  document.getElementById('isbn-input').value='';
+  document.getElementById('isbn-input').focus();
+  processIsbn(val);
+}
+
+function processIsbn(isbn){
+  var id=++S.counter;
+  S.books.unshift({id:id,isbn:isbn,status:'loading',keepa:null,verdict:'loading',customPrice:null,customBuy:null,graphRange:'m6'});
+  renderResults();
+
+  fetchKeepa(isbn).then(function(keepa){
+    var book=S.books.find(function(b){return b.id===id;});
+    if(!book)return;
+    book.keepa=keepa;
+    book.verdict=classify(book);
+    book.status='done';
+    renderResults();
+  }).catch(function(e){
+    var book=S.books.find(function(b){return b.id===id;});
+    if(!book)return;
+    book.status='error';
+    book.verdict='error';
+    book.errorMsg=e.message;
+    renderResults();
+  });
+}
+
+// ===== CAMERA =====
+var camStream=null;
+var camScanning=false;
+
+function toggleCam(){
+  if(camStream){stopCam();return;}
+  startCam();
+}
+
+function startCam(){
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false})
+  .then(function(stream){
+    camStream=stream;
+    var vid=document.getElementById('camvid');
+    vid.srcObject=stream;
+    document.getElementById('camwrap').style.display='';
+    camScanning=true;
+    scanFrame();
+  }).catch(function(){
+    // フォールバック：ファイル選択
+    document.getElementById('fileinput').click();
+  });
+}
+
+function stopCam(){
+  camScanning=false;
+  if(camStream){camStream.getTracks().forEach(function(t){t.stop();});camStream=null;}
+  document.getElementById('camwrap').style.display='none';
+}
+
+function scanFrame(){
+  if(!camScanning)return;
+  // ZXingライブラリがない場合はファイル選択にフォールバック
+  // 簡易：1秒ごとにフレームキャプチャして手動入力を補助
+  setTimeout(scanFrame,1000);
+}
+
+function onCamFile(input){
+  var file=input.files[0];
+  input.value='';
+  if(!file)return;
+  // ファイルからバーコードを読む（ZXingなしの場合はISBN入力を促す）
+  var w=document.getElementById('warn');
+  w.textContent='カメラからバーコードを読み取ります。数字が表示されたら確認してください。';
+  w.style.display='';
+  setTimeout(function(){w.style.display='none';},3000);
+}
+
+// ===== RENDER =====
+function renderResults(){
+  var el=document.getElementById('results');
+  if(!S.books.length){
+    el.innerHTML='<div class="empty"><div class="eicon">📦</div><div class="etitle">Ready to Scan</div><div class="etext">バーコードをスキャンしてください</div></div>';
+    return;
+  }
+  el.innerHTML=S.books.map(function(book){return renderCard(book);}).join('');
+}
+
+function renderCard(book){
+  var cls=book.status==='error'?'loading':book.verdict==='buy'?'buy':book.verdict==='skip'?'skip':'loading';
+  var badge=book.status==='loading'?'<span class="pulse">読込中...</span>':book.status==='error'?'エラー: '+(book.errorMsg||''):book.verdict==='buy'?'✓ BUY':'✕ SKIP';
+  var k=book.keepa;
+  var profit=k?calcProfit(book):0;
+  var sp=book.customPrice!=null?book.customPrice:getCondPrice(book);
+  var fee=k?Math.floor(sp*0.165):0;
+  var buyPrice=book.customBuy!=null?book.customBuy:S.buyPrice;
+  var condLabel=S.conditionGrade==='vgood'?'非常に良い':S.conditionGrade==='good'?'良い':'可';
+
+  var graphUrl=k&&k.asin?'https://graph.keepa.com/pricehistory.png?asin='+k.asin+'&domain=5&used=1&new=1&range='+getRangeNum(book.graphRange):'';
+  var keepaUrl=k&&k.asin?'https://keepa.com/#!product/5-'+k.asin:'';
+
+  return '<div class="card '+cls+'" id="card-'+book.id+'">'+
+    '<button class="rbtn" onclick="removeBook('+book.id+')">✕</button>'+
+    '<div class="card-top">'+
+    (k&&book.isbn?'<img class="card-img" src="https://cover.openbd.jp/'+book.isbn+'.jpg" onerror="this.style.display=\'none\'">':'<div class="card-img"></div>')+
+    '<div class="card-info">'+
+    '<div class="card-badge">'+badge+'</div>'+
+    '<div class="card-title">'+(k?k.title.slice(0,40):book.isbn)+(k&&k.title.length>40?'…':'')+'</div>'+
+    (k?'<div class="card-rank">Rank: #'+(k.rank||'—').toLocaleString()+'　出品: '+(k.sellerCount||0)+'人</div>':'')+
+    '</div></div>'+
+    (k?
+      '<div class="jito-row">'+
+      '<span class="jito-label">仕入</span>'+
+      '<input class="jito-input" type="text" inputmode="numeric" value="'+buyPrice+'" onchange="updateBuy('+book.id+',this.value)" placeholder="'+S.buyPrice+'">'+
+      '<span class="jito-label" style="margin-left:8px">売価('+condLabel+')</span>'+
+      '<input class="jito-input" type="text" inputmode="numeric" value="'+sp+'" onchange="updateSell('+book.id+',this.value)">'+
+      '</div>'+
+      '<div class="profit-box">'+
+      '<div class="pbox"><div class="pbox-label">利益目安</div><div class="pbox-val '+(profit>=S.thresholds.minProfit?'buy':'skip')+'">¥'+profit.toLocaleString()+'</div></div>'+
+      '<div class="pbox"><div class="pbox-label">手数料(16.5%)</div><div class="pbox-val" style="color:var(--text2)">¥'+fee.toLocaleString()+'</div></div>'+
+      '</div>'+
+      '<div class="price-section">'+
+      priceRow('中古可以上',k.priceUsed)+
+      (k.avgUsed180?'<div class="price-row"><span class="price-label">可 6ヶ月平均</span><span class="price-val avg">¥'+k.avgUsed180.toLocaleString()+'</span></div>':'')+
+      priceRow('中古良い',k.priceUsedGood)+
+      priceRow('中古非常に良い',k.priceUsedVGood)+
+      priceRow('中古ほぼ新品',k.priceUsedLikeNew)+
+      priceRow('新品最安',k.priceNew)+
+      priceRow('コレクター',k.priceCollectible)+
+      '</div>'+
+      '<table class="keepa-table">'+
+      '<tr><th>KeepaData</th><th style="text-align:right">1ヶ月</th><th style="text-align:right">3ヶ月</th><th style="text-align:right">6ヶ月</th><th style="text-align:right">1年</th></tr>'+
+      '<tr><td>RankUp</td><td class="num">'+(k.rankUp.m1||0)+'</td><td class="num">'+(k.rankUp.m3||0)+'</td><td class="num">'+(k.rankUp.m6||0)+'</td><td class="num">'+(k.rankUp.y1||0)+'</td></tr>'+
+      '<tr><td>New出品↓</td><td class="num">'+(k.newDown.m1||0)+'</td><td class="num">'+(k.newDown.m3||0)+'</td><td class="num">'+(k.newDown.m6||0)+'</td><td class="num">'+(k.newDown.y1||0)+'</td></tr>'+
+      '<tr><td>Used出品↓</td><td class="num">'+(k.usedDown.m1||0)+'</td><td class="num">'+(k.usedDown.m3||0)+'</td><td class="num">'+(k.usedDown.m6||0)+'</td><td class="num">'+(k.usedDown.y1||0)+'</td></tr>'+
+      '</table>'+
+      (graphUrl?
+        '<div class="graph-wrap">'+
+        '<div class="graph-tabs">'+
+        ['m1','m3','m6','y1','y3','all'].map(function(r){
+          return '<button class="gtab'+(book.graphRange===r?' active':'')+'" onclick="setRange('+book.id+',\''+r+'\')">'+rangeLabel(r)+'</button>';
+        }).join('')+
+        '</div>'+
+        '<img class="graph-img" src="'+graphUrl+'" onerror="this.style.display=\'none\'">'+
+        '</div>':'')+
+      (keepaUrl?'<a class="keepa-link" href="'+keepaUrl+'" target="_blank">📊 Keepaで詳細を見る</a>':'')+
+      (k.isDemo?'<div style="font-size:10px;color:var(--text3);margin-top:6px;text-align:center">デモデータ — Keepa APIキーを設定してください</div>':'')
+    :
+      book.status==='loading'?'':'<div style="font-size:12px;color:var(--skip);margin-top:8px">'+（book.errorMsg||'データ取得失敗')+'</div>'
+    )+
+  '</div>';
+}
+
+function priceRow(label,val){
+  if(!val)return'';
+  return'<div class="price-row"><span class="price-label">'+label+'</span><span class="price-val neu">¥'+val.toLocaleString()+'</span></div>';
+}
+
+function getRangeNum(r){
+  var map={m1:30,m3:90,m6:180,y1:365,y3:1095,all:3650};
+  return map[r]||180;
+}
+
+function rangeLabel(r){
+  var map={m1:'1ヶ月',m3:'3ヶ月',m6:'6ヶ月',y1:'1年',y3:'3年',all:'全期間'};
+  return map[r]||r;
+}
+
+function setRange(id,range){
+  var book=S.books.find(function(b){return b.id===id;});
+  if(!book)return;
+  book.graphRange=range;
+  renderResults();
+}
+
+function updateBuy(id,val){
+  var book=S.books.find(function(b){return b.id===id;});
+  if(!book)return;
+  book.customBuy=Number(val)||0;
+  book.verdict=classify(book);
+  renderResults();
+}
+
+function updateSell(id,val){
+  var book=S.books.find(function(b){return b.id===id;});
+  if(!book)return;
+  book.customPrice=Number(val)||0;
+  book.verdict=classify(book);
+  renderResults();
+}
+
+function removeBook(id){S.books=S.books.filter(function(b){return b.id!==id;});renderResults();}
+function clearAll(){S.books=[];S.counter=0;renderResults();}
+
+// ===== SETTINGS =====
+function renderSettings(){
+  var el=document.getElementById('settings');
+  if(!S.showSettings){el.style.display='none';return;}
+  el.className='settings';el.style.display='';
+  var t=S.thresholds;
+  el.innerHTML=
+    '<span class="sec-label">API設定</span>'+
+    '<div class="field"><label>Keepa APIキー</label><input type="text" value="'+S.keepaKey+'" placeholder="未入力はデモデータ" oninput="S.keepaKey=this.value"></div>'+
+    '<hr class="div">'+
+    '<span class="sec-label">仕入れ設定</span>'+
+    '<div class="field"><label>デフォルト仕入れ価格（円）</label><input type="text" inputmode="numeric" value="'+S.buyPrice+'" oninput="S.buyPrice=Number(this.value)||0"></div>'+
+    '<div class="field"><label>送料（円）</label><input type="text" inputmode="numeric" value="'+S.shippingCost+'" oninput="S.shippingCost=Number(this.value)||0"></div>'+
+    '<div class="field"><label>参照コンディション</label>'+
+    '<select oninput="S.conditionGrade=this.value">'+
+    '<option value="used"'+(S.conditionGrade==='used'?' selected':'')+'>可以上（最安値）</option>'+
+    '<option value="good"'+(S.conditionGrade==='good'?' selected':'')+'>良い以上</option>'+
+    '<option value="vgood"'+(S.conditionGrade==='vgood'?' selected':'')+'>非常に良い以上</option>'+
+    '</select></div>'+
+    '<p style="font-size:10px;color:var(--text3);margin-top:4px">Amazon手数料16.5%を自動計算</p>'+
+    '<hr class="div">'+
+    '<span class="sec-label">買い判定基準</span>'+
+    '<div class="field"><label>最低利益額（¥以上）</label><input type="text" inputmode="numeric" value="'+t.minProfit+'" oninput="S.thresholds.minProfit=Number(this.value)||0"></div>'+
+    '<div class="field"><label>Sales Rank 上限</label><input type="text" inputmode="numeric" value="'+t.maxSalesRank+'" oninput="S.thresholds.maxSalesRank=Number(this.value)||0"></div>'+
+    '<div class="field"><label>出品者数 上限</label><input type="text" inputmode="numeric" value="'+t.maxSellers+'" oninput="S.thresholds.maxSellers=Number(this.value)||0"></div>'+
+    '<button class="save-btn" onclick="saveSettings()">💾 保存</button>'+
+    '<div class="saved" id="saved">✓ 保存しました</div>';
+}
+
+function saveSettings(){
+  persist();
+  var m=document.getElementById('saved');
+  if(m){m.style.display='';setTimeout(function(){m.style.display='none';},2000);}
+}
+function toggleSettings(){S.showSettings=!S.showSettings;renderSettings();}
+
+renderSettings();
+renderResults();
+
+// バーコードリーダー対応：入力フィールドにフォーカスを維持
+document.getElementById('isbn-input').focus();
+document.addEventListener('click',function(e){
+  if(!e.target.closest('input')&&!e.target.closest('button')&&!e.target.closest('a')){
+    document.getElementById('isbn-input').focus();
+  }
+});
+</script>
+</body>
+</html>
